@@ -1,7 +1,22 @@
-<html>
-    <body>
-        <h1>
-            hello world
-        </h1>
-    </body>
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>사다리 게임</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+  <div class="container">
+    <h1>사다리 게임</h1>
+    <div class="input-area">
+      <textarea id="names" placeholder="참가자 이름을 줄마다 입력하세요 (예: 철수, 영희...)"></textarea>
+      <textarea id="results" placeholder="결과 항목을 줄마다 입력하세요 (예: 상품1, 꽝...)"></textarea>
+      <button id="generate">사다리 생성</button>
+    </div>
+    <canvas id="ladder" width="800" height="400"></canvas>
+    <div id="output"></div>
+  </div>
+  <script src="script.js"></script>
+</body>
 </html>

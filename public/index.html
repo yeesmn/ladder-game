@@ -3,447 +3,368 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>달리기 경주 관전 게임</title>
+  <title>사다리 게임</title>
   <style>
-    :root {
-      --bg: #0b1020;
-      --panel: #121933;
-      --ink: #e9f0ff;
-      --muted: #9fb2d0;
-      --accent: #7aa2ff;
-      --lane: #192349;
-      --finish: #ff7a7a;
+    :root{
+      --bg:#0b1020; --panel:#121933; --ink:#e9f0ff; --muted:#9fb2d0; --accent:#7aa2ff; --accent2:#22c55e;
     }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Noto Sans, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
-      color: var(--ink);
-      background: radial-gradient(1200px 600px at 20% -10%, #1a1f35 0%, #090e1f 60%, #040614 100%);
-      min-height: 100vh;
-      display: grid;
-      grid-template-rows: auto 1fr auto;
-    }
-    header {
-      padding: 16px 20px;
-      display: flex; gap: 12px; align-items: center; justify-content: space-between;
-    }
-    .title { font-weight: 800; letter-spacing: .4px; }
-    .wrap {
-      display: grid;
-      grid-template-columns: 360px 1fr;
-      gap: 16px;
-      padding: 0 20px 20px 20px;
-    }
-    @media (max-width: 960px) {
-      .wrap { grid-template-columns: 1fr; }
-    }
-    .panel {
-      background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(0,0,0,0.06)), var(--panel);
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 16px;
-      box-shadow: 0 10px 30px rgba(0,0,0,.35);
-    }
-    .setup { padding: 16px; position: sticky; top: 12px; }
-    .setup h2 { margin: 4px 0 12px; font-size: 18px; color: var(--accent); }
-    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .runner-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
-    .chip {
-      user-select: none;
-      display: inline-flex; align-items: center; justify-content: center;
-      gap: 6px;
-      padding: 10px 0; border-radius: 12px; border: 1px solid rgba(255,255,255,.12);
-      background: rgba(255,255,255,.04);
-      cursor: pointer;
-      font-weight: 700;
-      transition: transform .05s ease, background .2s ease, border-color .2s ease;
-    }
-    .chip input { display: none; }
-    .chip .dot { width: 10px; height: 10px; border-radius: 999px; }
-    .chip.active { background: rgba(122,162,255,.15); border-color: rgba(122,162,255,.6); transform: translateY(-1px); }
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;background:radial-gradient(1200px 600px at 20% -10%,#1a1f35 0%,#090e1f 60%,#040614 100%);color:var(--ink);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+    header{padding:16px 20px;display:flex;justify-content:space-between;align-items:center}
+    .wrap{display:grid;grid-template-columns:360px 1fr;gap:16px;padding:0 20px 20px}
+    @media (max-width:960px){.wrap{grid-template-columns:1fr}}
+    .panel{background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(0,0,0,.06)),var(--panel);border:1px solid rgba(255,255,255,.08);border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    .left{padding:16px;position:sticky;top:12px}
+    .left h2{margin:0 0 12px;color:var(--accent)}
+    .control{margin:10px 0}
+    .control label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+    input[type="text"],input[type="number"],select{width:100%;padding:10px;border-radius:10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:var(--ink)}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .btn{width:100%;padding:12px 16px;border-radius:12px;border:1px solid rgba(255,255,255,.12);color:#fff;font-weight:800;background:linear-gradient(180deg,#2d46a3,#193074);cursor:pointer;box-shadow:0 6px 16px rgba(14,27,74,.6)}
+    .btn.alt{background:linear-gradient(180deg,#394866,#1f2a40)}
+    .btn.green{background:linear-gradient(180deg,#2bb24a,#167a2f)}
+    .row{display:flex;gap:8px}
+    .tag{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);padding:8px 10px;border-radius:10px}
+    .list{display:grid;gap:6px}
+    .list input{width:100%}
+    .small{font-size:12px;color:var(--muted)}
 
-    .control { margin: 12px 0; }
-    .control label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
-    .control input[type="range"] { width: 100%; }
-    .btn {
-      width: 100%;
-      padding: 12px 16px;
-      border-radius: 12px;
-      border: 1px solid rgba(255,255,255,.12);
-      color: white; font-weight: 800; letter-spacing: .3px;
-      background: linear-gradient(180deg, #2d46a3, #193074);
-      cursor: pointer;
-      transition: transform .05s ease, filter .2s ease, box-shadow .2s ease;
-      box-shadow: 0 6px 16px rgba(14, 27, 74, .6);
-    }
-    .btn:disabled { filter: grayscale(1) brightness(0.6); cursor: not-allowed; }
-    .btn:hover:not(:disabled) { filter: brightness(1.05); }
-    .btn:active:not(:disabled) { transform: translateY(1px); }
+    .stage{padding:16px;display:grid;gap:10px}
+    .canvasWrap{position:relative;min-height:480px;display:grid;place-items:center;padding:10px}
+    svg{width:100%;height:520px;display:block}
+    .legend{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    .legend .key{display:inline-flex;gap:6px;align-items:center;color:var(--muted);font-size:12px}
+    .legend .box{width:10px;height:10px;border-radius:2px}
 
-    .track-area { padding: 16px; display: grid; gap: 14px; }
-    .legend { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }
-    .legend .key { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
-    .legend .icon { width: 10px; height: 10px; border-radius: 2px; }
-
-    .track { position: relative; height: 74px; background: var(--lane); border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,.08); }
-    .lane-label { position: absolute; left: 8px; top: 8px; font-weight: 900; opacity: .9; text-shadow: 0 1px 0 rgba(0,0,0,.6); }
-    .finish-line { position: absolute; top: 0; bottom: 0; width: 8px; right: 16px; background: repeating-linear-gradient( to bottom, var(--finish) 0 10px, #ffffff 10px 20px ); box-shadow: inset 0 0 0 1px rgba(255,255,255,.25); }
-    .runner { position: absolute; top: 50%; transform: translate(0, -50%); width: 44px; height: 44px; border-radius: 999px; display: grid; place-items: center; font-weight: 900; color: #0c0c0c; text-shadow: 0 1px 0 rgba(255,255,255,.3); box-shadow: 0 8px 20px rgba(0,0,0,.35); }
-    .runner .bubble { position: absolute; top: -26px; font-size: 12px; color: #fff; background: rgba(0,0,0,.55); padding: 2px 6px; border-radius: 6px; opacity: 0; transform: translateY(-6px); transition: opacity .2s ease, transform .2s ease; white-space: nowrap; }
-    .runner.flash .bubble { opacity: 1; transform: translateY(0); }
-
-    .item { position: absolute; top: 50%; transform: translate(-50%, -50%); width: 28px; height: 28px; border-radius: 6px; display: grid; place-items: center; font-size: 16px; filter: drop-shadow(0 2px 8px rgba(0,0,0,.35)); }
-    .item.hurdle { background: #ff9f43; }
-    .item.puddle { background: #0ea5e9; }
-    .item.turbo { background: #22c55e; }
-    .item.coin { background: #facc15; }
-
-    .log { padding: 12px; font-size: 13px; max-height: 240px; overflow: auto; border-top: 1px solid rgba(255,255,255,.06); }
-    .log p { margin: 6px 0; color: var(--muted); }
-
-    .toast { position: fixed; inset: auto 16px 16px auto; background: rgba(21,27,54,.95); border: 1px solid rgba(255,255,255,.08); padding: 10px 14px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.35); display: none; }
-    .toast.show { display: block; animation: pop .2s ease; }
-    @keyframes pop { from { transform: scale(.96); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-
-    .footer { padding: 8px 20px 20px; color: var(--muted); font-size: 12px; text-align: center; }
+    .result{padding:12px;border-top:1px solid rgba(255,255,255,.06);max-height:200px;overflow:auto}
+    .result p{margin:6px 0;color:var(--muted)}
   </style>
 </head>
 <body>
   <header>
-    <div class="title">🏁 달리기 경주 관전 게임</div>
-    <div style="opacity:.7; font-size:13px">선수 선택 → 시작 버튼 → 우승자 관전</div>
+    <div style="font-weight:800">🔀 사다리 게임</div>
+    <div class="small">참가자와 결과를 입력하고 사다리를 생성하세요</div>
   </header>
 
   <div class="wrap">
-    <!-- Left: Setup -->
-    <section class="panel setup" id="setup">
-      <h2>선수 선택</h2>
-      <div class="runner-grid" id="runnerGrid"></div>
+    <section class="panel left">
+      <h2>설정</h2>
+      <div class="control">
+        <label>참가자 수</label>
+        <select id="count">
+          <option>2</option><option>3</option><option selected>4</option><option>5</option><option>6</option><option>7</option><option>8</option>
+        </select>
+      </div>
+
+      <div class="grid">
+        <div class="control">
+          <label>세로선 길이</label>
+          <select id="height">
+            <option value="360">짧음</option>
+            <option value="480" selected>중간</option>
+            <option value="600">길음</option>
+          </select>
+        </div>
+        <div class="control">
+          <label>가로발판 밀도</label>
+          <select id="density">
+            <option value="low">낮음</option>
+            <option value="mid" selected>중간</option>
+            <option value="high">높음</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="control">
+          <label>애니메이션 속도</label>
+          <select id="speed">
+            <option value="slow">느림</option>
+            <option value="normal" selected>보통</option>
+            <option value="fast">빠름</option>
+          </select>
+        </div>
+        <div class="control">
+          <label>씨드 (옵션)</label>
+          <input id="seed" type="text" placeholder="랜덤 고정값" />
+        </div>
+      </div>
 
       <div class="control">
-        <label for="obstacles">장애물 수 (각 레인)</label>
-        <input type="range" id="obstacles" min="0" max="6" value="3" />
+        <label>참가자 이름</label>
+        <div class="list" id="names"></div>
       </div>
 
-      <div class="row">
-        <div class="control">
-          <label for="difficulty">난이도</label>
-          <select id="difficulty" style="width:100%; padding:10px; border-radius:10px; background: rgba(255,255,255,.06); color: var(--ink); border: 1px solid rgba(255,255,255,.12);">
-            <option value="easy">쉬움</option>
-            <option value="normal" selected>보통</option>
-            <option value="hard">어려움</option>
-          </select>
-        </div>
-        <div class="control">
-          <label for="raceLen">트랙 길이</label>
-          <select id="raceLen" style="width:100%; padding:10px; border-radius:10px; background: rgba(255,255,255,.06); color: var(--ink); border: 1px solid rgba(255,255,255,.12);">
-            <option value="short">짧음</option>
-            <option value="medium" selected>중간</option>
-            <option value="long">길음</option>
-          </select>
-        </div>
+      <div class="control">
+        <label>바닥 결과</label>
+        <div class="list" id="goals"></div>
+        <div class="small">결과가 비어 있으면 1, 2, 3처럼 자동 생성</div>
       </div>
 
-      <div style="display:flex; gap:8px; margin-top:8px;">
-        <button class="btn" id="startBtn">🏁 경주 시작</button>
-        <button class="btn" id="resetBtn" style="background: linear-gradient(180deg, #394866, #1f2a40);">↺ 초기화</button>
+      <div class="row" style="margin-top:8px">
+        <button class="btn" id="gen">사다리 생성</button>
+        <button class="btn alt" id="shuffle">결과 섞기</button>
       </div>
-
-      <div class="log" id="log"></div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn green" id="runAll">모두 내려가기</button>
+        <button class="btn alt" id="clear">초기화</button>
+      </div>
     </section>
 
-    <!-- Right: Track -->
-    <section class="panel" style="display:flex; flex-direction:column;">
-      <div class="track-area" id="trackArea">
-        <div class="legend">
-          <span class="key"><span class="icon" style="background:#ff9f43"></span>허들</span>
-          <span class="key"><span class="icon" style="background:#0ea5e9"></span>물웅덩이</span>
-          <span class="key"><span class="icon" style="background:#22c55e"></span>터보</span>
-          <span class="key"><span class="icon" style="background:#facc15"></span>코인</span>
-        </div>
-        <div id="tracks"></div>
+    <section class="panel stage">
+      <div class="legend">
+        <span class="key"><span class="box" style="background:#7aa2ff"></span>세로선</span>
+        <span class="key"><span class="box" style="background:#22c55e"></span>가로발판</span>
+        <span class="key"><span class="box" style="background:#facc15"></span>이동 경로</span>
       </div>
+      <div class="canvasWrap">
+        <svg id="ladder" viewBox="0 0 900 560" preserveAspectRatio="xMidYMid meet"></svg>
+      </div>
+      <div class="result" id="result"></div>
     </section>
   </div>
 
-  <div class="toast" id="toast"></div>
-  <div class="footer">Tip: 선수 2명 이상을 선택하면 더 재밌어요. 설정은 즉시 반영됩니다.</div>
-
   <script>
-    // Runner presets
-    const RUNNERS = [
-      { id: 'A', color: '#E74C3C' },
-      { id: 'B', color: '#3498DB' },
-      { id: 'C', color: '#27AE60' },
-      { id: 'D', color: '#F1C40F' },
-      { id: 'E', color: '#9B59B6' },
-    ];
+    // Utilities
+    function mulberry32(a){return function(){var t=a+=0x6D2B79F5;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296 }}
+    function hashSeed(str){let h=1779033703^str.length;for(let i=0;i<str.length;i++){h=Math.imul(h^str.charCodeAt(i),3432918353);h=h<<13|h>>>19;}return h>>>0}
 
-    // DOM refs
-    const runnerGrid = document.getElementById('runnerGrid');
-    const startBtn = document.getElementById('startBtn');
-    const resetBtn = document.getElementById('resetBtn');
-    const tracksWrap = document.getElementById('tracks');
-    const logBox = document.getElementById('log');
-    const toast = document.getElementById('toast');
+    const svg = document.getElementById('ladder');
+    const namesBox = document.getElementById('names');
+    const goalsBox = document.getElementById('goals');
+    const countSel = document.getElementById('count');
+    const heightSel = document.getElementById('height');
+    const densitySel = document.getElementById('density');
+    const seedInput = document.getElementById('seed');
+    const speedSel = document.getElementById('speed');
+    const genBtn = document.getElementById('gen');
+    const runBtn = document.getElementById('runAll');
+    const shuffleBtn = document.getElementById('shuffle');
+    const clearBtn = document.getElementById('clear');
+    const resultBox = document.getElementById('result');
 
-    const obstaclesRange = document.getElementById('obstacles');
-    const difficultySel = document.getElementById('difficulty');
-    const raceLenSel = document.getElementById('raceLen');
+    // Initial fields
+    function rebuildFields(){
+      namesBox.innerHTML='';
+      goalsBox.innerHTML='';
+      const n = Number(countSel.value);
+      const defaults = ['A','B','C','D','E','F','G','H'];
+      for(let i=0;i<n;i++){
+        const ni = document.createElement('input');
+        ni.type='text'; ni.value = defaults[i] || `P${i+1}`; ni.dataset.idx=i;
+        namesBox.appendChild(ni);
+        const gi = document.createElement('input');
+        gi.type='text'; gi.placeholder = `결과 ${i+1}`; gi.dataset.idx=i;
+        goalsBox.appendChild(gi);
+      }
+    }
+    rebuildFields();
+    countSel.addEventListener('change', rebuildFields);
 
-    // State
-    let selected = new Set(['A','B','C']);
-    let game = null; // will hold current race state
+    function getNames(){
+      return Array.from(namesBox.querySelectorAll('input')).map(i=>i.value.trim()||`P${Number(i.dataset.idx)+1}`)
+    }
+    function getGoals(){
+      const arr = Array.from(goalsBox.querySelectorAll('input')).map((i,idx)=>i.value.trim()||`${idx+1}`);
+      return arr;
+    }
 
-    // Build runner chips
-    RUNNERS.forEach(r => {
-      const label = document.createElement('label');
-      label.className = 'chip' + (selected.has(r.id) ? ' active' : '');
-      label.dataset.id = r.id;
-      label.innerHTML = `<span class="dot" style="background:${r.color}"></span> ${r.id}
-                         <input type="checkbox" ${selected.has(r.id) ? 'checked' : ''}/>`;
-      label.addEventListener('click', e => {
-        // ignore when clicking while running
-        if (game && game.running) return;
-        const id = label.dataset.id;
-        if (selected.has(id)) selected.delete(id); else selected.add(id);
-        label.classList.toggle('active');
-      });
-      runnerGrid.appendChild(label);
+    // Ladder model
+    let model = null; // {cols, rows, rungs, width, height, startX, topY, bottomY}
+
+    function generateLadder(){
+      const cols = Number(countSel.value);
+      const height = Number(heightSel.value);
+      const width = 860; // inner width
+      const left = 40, right = width-40;
+      const top = 40, bottom = Math.min(520-40, Number(heightSel.value));
+      const colX = [];
+      for(let i=0;i<cols;i++) colX.push(left + i*(right-left)/(cols-1));
+
+      // density controls number of rows and rung attempts
+      const density = densitySel.value; // low mid high
+      const rowCount = density==='low'? 9 : density==='mid'? 12 : 16;
+
+      // RNG
+      let rng = Math.random;
+      const s = seedInput.value.trim();
+      if(s){rng = mulberry32(hashSeed(s));}
+
+      const rowsY = [];
+      for(let r=0;r<rowCount;r++) rowsY.push(top + (r+1)*(bottom-top)/(rowCount+1));
+
+      // Create rungs with constraints: no adjacent rungs connecting same pair at same row, and no touching neighbors in immediate next row
+      const rungs = []; // each {c: left column index, y}
+      for(const y of rowsY){
+        // attempt to place between neighboring columns
+        for(let c=0;c<cols-1;c++){
+          const p = rng();
+          const threshold = density==='low'? 0.28 : density==='mid'? 0.44 : 0.6;
+          if(p < threshold){
+            // avoid placing if previous row had rung adjacent at same columns
+            const prev = rungs.findLast? rungs.findLast(g=>Math.abs(g.y - y) < 18 && Math.abs(g.c - c) <= 1)
+                                       : [...rungs].reverse().find(g=>Math.abs(g.y - y) < 18 && Math.abs(g.c - c) <= 1);
+            if(prev) continue;
+            rungs.push({c,y});
+          }
+        }
+      }
+
+      model = {cols, width, height:bottom+40, left, right, top, bottom, colX, rungs};
+      drawLadder();
+      resultBox.innerHTML = '';
+    }
+
+    function drawLadder(){
+      if(!model) return;
+      const {cols,left,right,top,bottom,colX,rungs,height} = model;
+      svg.setAttribute('viewBox', `0 0 900 ${height}`);
+      svg.innerHTML = '';
+      // verticals
+      for(let i=0;i<cols;i++){
+        const line = lineEl(colX[i], top, colX[i], bottom, '#7aa2ff', 3);
+        svg.appendChild(line);
+        // top name
+        const tn = textEl(colX[i], top-16, getNames()[i], 'middle');
+        svg.appendChild(tn);
+        // bottom goal
+        const gb = textEl(colX[i], bottom+18, getGoals()[i] || String(i+1), 'middle');
+        svg.appendChild(gb);
+      }
+      // rungs
+      for(const r of rungs){
+        const x1 = colX[r.c], x2 = colX[r.c+1];
+        const y = r.y;
+        svg.appendChild(lineEl(x1, y, x2, y, '#22c55e', 4));
+      }
+    }
+
+    function lineEl(x1,y1,x2,y2,stroke,w){
+      const l = document.createElementNS('http://www.w3.org/2000/svg','line');
+      l.setAttribute('x1',x1);l.setAttribute('y1',y1);l.setAttribute('x2',x2);l.setAttribute('y2',y2);
+      l.setAttribute('stroke',stroke);l.setAttribute('stroke-width',w);
+      l.setAttribute('stroke-linecap','round');
+      return l;
+    }
+    function circleEl(cx,cy,r,fill){
+      const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      c.setAttribute('cx',cx);c.setAttribute('cy',cy);c.setAttribute('r',r);c.setAttribute('fill',fill);
+      return c;
+    }
+    function pathEl(d,stroke,w){
+      const p = document.createElementNS('http://www.w3.org/2000/svg','path');
+      p.setAttribute('d',d);p.setAttribute('fill','none');p.setAttribute('stroke',stroke);p.setAttribute('stroke-width',w);
+      p.setAttribute('stroke-linecap','round');p.setAttribute('stroke-linejoin','round');
+      return p;
+    }
+    function textEl(x,y,txt,anchor){
+      const t = document.createElementNS('http://www.w3.org/2000/svg','text');
+      t.setAttribute('x',x); t.setAttribute('y',y); t.setAttribute('text-anchor',anchor||'start');
+      t.setAttribute('font-size','14'); t.setAttribute('fill','#e9f0ff'); t.textContent = txt; return t;
+    }
+
+    function shuffleGoals(){
+      const inputs = Array.from(goalsBox.querySelectorAll('input'));
+      const vals = inputs.map((i,idx)=>i.value.trim()||`${idx+1}`);
+      // Fisher Yates
+      for(let i=vals.length-1;i>0;i--){
+        const j = Math.floor(Math.random()*(i+1));
+        [vals[i],vals[j]] = [vals[j],vals[i]];
+      }
+      inputs.forEach((i,idx)=>i.value = vals[idx]);
+      drawLadder();
+    }
+
+    // Compute mapping for a given start index
+    function traverse(startIdx){
+      const {colX, rungs, top, bottom} = model;
+      let xIdx = startIdx;
+      let y = top;
+      const pathPoints = [[colX[xIdx], y]];
+      // sort rungs by y
+      const sorted = [...rungs].sort((a,b)=>a.y-b.y);
+      for(const r of sorted){
+        const nextY = r.y;
+        // move down to rung
+        pathPoints.push([colX[xIdx], nextY]);
+        // if rung connects current index
+        if(r.c === xIdx){
+          // go right
+          pathPoints.push([colX[xIdx+1], nextY]);
+          xIdx = xIdx+1;
+        } else if(r.c === xIdx-1){
+          // go left
+          pathPoints.push([colX[xIdx-1], nextY]);
+          xIdx = xIdx-1;
+        }
+        y = nextY;
+      }
+      // go to bottom
+      pathPoints.push([colX[xIdx], bottom]);
+      return {endIdx:xIdx, pathPoints};
+    }
+
+    function drawPath(points,color){
+      const d = points.map((p,i)=> (i? 'L':'M')+p[0]+','+p[1]).join(' ');
+      const p = pathEl(d, color, 4);
+      p.setAttribute('stroke-dasharray','6 6');
+      svg.appendChild(p);
+      const head = points[points.length-1];
+      svg.appendChild(circleEl(head[0], head[1], 4, color));
+      return p;
+    }
+
+    async function animateTraverse(startIdx, color){
+      const {pathPoints, endIdx} = traverse(startIdx);
+      // animate a dot along the path
+      const dot = circleEl(pathPoints[0][0], pathPoints[0][1], 6, color);
+      dot.setAttribute('opacity','0.95');
+      svg.appendChild(dot);
+      const speed = speedSel.value==='slow'? 900 : speedSel.value==='fast'? 300 : 550; // ms per segment
+      for(let i=1;i<pathPoints.length;i++){
+        const [x1,y1]=pathPoints[i-1];
+        const [x2,y2]=pathPoints[i];
+        const t0 = performance.now();
+        let done=false; while(!done){
+          const t = (performance.now()-t0)/speed;
+          if(t>=1){dot.setAttribute('cx',x2); dot.setAttribute('cy',y2); done=true;}
+          else {dot.setAttribute('cx', x1+(x2-x1)*t); dot.setAttribute('cy', y1+(y2-y1)*t);} await new Promise(r=>requestAnimationFrame(r));
+        }
+      }
+      return endIdx;
+    }
+
+    function showPairs(pairs){
+      resultBox.innerHTML = '';
+      pairs.forEach(p=>{
+        const line = document.createElement('p');
+        line.textContent = `${p.name} -> ${p.goal}`;
+        resultBox.appendChild(line);
+      })
+    }
+
+    // Event handlers
+    genBtn.addEventListener('click', generateLadder);
+    shuffleBtn.addEventListener('click', shuffleGoals);
+    clearBtn.addEventListener('click', ()=>{ svg.innerHTML=''; resultBox.innerHTML=''; model=null; });
+
+    runBtn.addEventListener('click', async ()=>{
+      if(!model) generateLadder();
+      const names = getNames();
+      const goals = getGoals();
+      const colors = ['#facc15','#60a5fa','#34d399','#f472b6','#a78bfa','#fb923c','#f87171','#4ade80'];
+      const pairs = [];
+      // Clear previous path overlays only (keep ladder)
+      drawLadder();
+      for(let i=0;i<model.cols;i++){
+        const endIdx = await animateTraverse(i, colors[i%colors.length]);
+        pairs.push({name:names[i], goal:goals[endIdx]});
+      }
+      showPairs(pairs);
     });
 
-    function log(msg) {
-      const p = document.createElement('p');
-      const t = new Date().toLocaleTimeString();
-      p.textContent = `[${t}] ${msg}`;
-      logBox.prepend(p);
-    }
-
-    function showToast(msg) {
-      toast.textContent = msg;
-      toast.classList.add('show');
-      setTimeout(() => toast.classList.remove('show'), 1400);
-    }
-
-    function createTrackRow(laneIndex, runner) {
-      const row = document.createElement('div');
-      row.className = 'track';
-      row.dataset.runner = runner.id;
-
-      const label = document.createElement('div');
-      label.className = 'lane-label';
-      label.textContent = `선수 ${runner.id}`;
-      row.appendChild(label);
-
-      const finish = document.createElement('div');
-      finish.className = 'finish-line';
-      row.appendChild(finish);
-
-      // Runner token
-      const tok = document.createElement('div');
-      tok.className = 'runner';
-      tok.style.background = runner.color;
-      tok.innerHTML = `<div class="letter">${runner.id}</div><div class="bubble"></div>`;
-      row.appendChild(tok);
-
-      return { row, tok };
-    }
-
-    function spawnItems(rowEl, count, finishX) {
-      const items = [];
-      const types = ['hurdle','puddle','turbo','coin'];
-      for (let i = 0; i < count; i++) {
-        const t = types[Math.floor(Math.random()*types.length)];
-        const x = 40 + Math.random() * (finishX - 100); // keep clear of edges
-        const el = document.createElement('div');
-        el.className = `item ${t}`;
-        el.style.left = `${x}px`;
-        el.innerHTML = t === 'hurdle' ? '🧱' : t === 'puddle' ? '💧' : t === 'turbo' ? '⚡' : '🪙';
-        rowEl.appendChild(el);
-        items.push({ type: t, x, hit: false, el });
-      }
-      return items;
-    }
-
-    function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
-
-    function startRace() {
-      if (selected.size < 2) {
-        showToast('선수를 2명 이상 선택해 주세요.');
-        return;
-      }
-
-      // Reset track area
-      tracksWrap.innerHTML = '';
-      logBox.innerHTML = '';
-
-      // Config
-      const diff = difficultySel.value; // easy, normal, hard
-      const lenOpt = raceLenSel.value; // short, medium, long
-      const perLaneItems = Number(obstaclesRange.value);
-
-      const baseSpeed = diff === 'easy' ? 1.5 : diff === 'normal' ? 1.8 : 2.0; // px per tick
-      const jitter = diff === 'easy' ? 0.6 : diff === 'normal' ? 0.9 : 1.2;
-      const tickMs = 16; // 60 fps-ish
-      const trackLengthPx = lenOpt === 'short' ? 720 : lenOpt === 'medium' ? 960 : 1200;
-
-      const lanes = Array.from(selected).map((id, idx) => {
-        const preset = RUNNERS.find(r => r.id === id);
-        const { row, tok } = createTrackRow(idx, preset);
-        tracksWrap.appendChild(row);
-        const finishX = row.clientWidth ? row.clientWidth - 28 : trackLengthPx; // fallback before layout
-        const items = spawnItems(row, perLaneItems, finishX);
-        return {
-          id,
-          color: preset.color,
-          x: 12, // starting x
-          yCenter: row.clientHeight / 2,
-          el: tok,
-          rowEl: row,
-          items,
-          effects: { slowUntil: 0, boostUntil: 0, stunUntil: 0 },
-          lastBubble: 0,
-          finishX: finishX - 44 /* token size */ - 16 /* finish offset */,
-        };
-      });
-
-      // If layout not measured yet, measure after a frame
-      requestAnimationFrame(() => {
-        lanes.forEach(l => {
-          const w = l.rowEl.clientWidth || trackLengthPx;
-          l.finishX = w - 44 - 16;
-          l.rowEl.querySelectorAll('.item').forEach(it => {
-            // already positioned in px based on earlier guess, good enough
-          });
-        });
-      });
-
-      let running = true;
-      let winner = null;
-      const startAt = performance.now();
-
-      function say(lane, text) {
-        const now = performance.now();
-        if (now - lane.lastBubble < 400) return; // avoid spam
-        lane.lastBubble = now;
-        const b = lane.el.querySelector('.bubble');
-        b.textContent = text;
-        lane.el.classList.add('flash');
-        setTimeout(() => lane.el.classList.remove('flash'), 420);
-      }
-
-      function applyItem(lane, item) {
-        if (item.hit) return;
-        item.hit = true;
-        switch (item.type) {
-          case 'hurdle': {
-            lane.effects.stunUntil = performance.now() + 800;
-            say(lane, '점프 실패');
-            log(`선수 ${lane.id} 허들에 걸림. 잠깐 멈춤`);
-            break;
-          }
-          case 'puddle': {
-            lane.effects.slowUntil = performance.now() + 1800;
-            say(lane, '미끄럽다');
-            log(`선수 ${lane.id} 물웅덩이로 감속`);
-            break;
-          }
-          case 'turbo': {
-            lane.effects.boostUntil = performance.now() + 1600;
-            say(lane, '터보!');
-            log(`선수 ${lane.id} 터보 발동`);
-            break;
-          }
-          case 'coin': {
-            lane.x += 14; // 작은 즉시 부스트
-            say(lane, '+코인');
-            log(`선수 ${lane.id} 코인 획득`);
-            break;
-          }
-        }
-        item.el.style.opacity = .35;
-        item.el.style.transform += ' scale(.9)';
-      }
-
-      function tick() {
-        if (!running) return;
-        const now = performance.now();
-
-        for (const lane of lanes) {
-          // effects
-          const stunned = now < lane.effects.stunUntil;
-          const slowed = now < lane.effects.slowUntil;
-          const boosted = now < lane.effects.boostUntil;
-
-          // current speed base
-          const base = baseSpeed + (Math.random() - 0.5) * jitter;
-          let speed = base;
-          if (slowed) speed *= 0.45;
-          if (boosted) speed *= 1.65;
-          if (stunned) speed = 0;
-
-          lane.x = clamp(lane.x + speed, 12, lane.finishX + 1);
-          lane.el.style.left = lane.x + 'px';
-
-          // item collision check
-          for (const it of lane.items) {
-            if (!it.hit && lane.x + 22 >= it.x && lane.x <= it.x + 22) {
-              applyItem(lane, it);
-            }
-          }
-
-          // finish check
-          if (!winner && lane.x >= lane.finishX) {
-            winner = lane;
-            running = false;
-          }
-        }
-
-        if (running) {
-          requestAnimationFrame(tick);
-        } else if (winner) {
-          const elapsed = ((performance.now() - startAt) / 1000).toFixed(2);
-          say(winner, '우승!');
-          log(`우승자는 선수 ${winner.id}. 기록 ${elapsed}s`);
-          showToast(`🎉 우승: 선수 ${winner.id} (${elapsed}s)`);
-          startBtn.disabled = false;
-          enableSetup(true);
-        }
-      }
-
-      // position tokens at start vertically centered
-      lanes.forEach((l, i) => {
-        l.el.style.left = l.x + 'px';
-      });
-
-      // lock setup while running
-      startBtn.disabled = true;
-      enableSetup(false);
-      game = { running: true };
-      requestAnimationFrame(tick);
-    }
-
-    function enableSetup(on) {
-      document.querySelectorAll('.chip').forEach(el => el.style.pointerEvents = on ? 'auto' : 'none');
-      obstaclesRange.disabled = !on;
-      difficultySel.disabled = !on;
-      raceLenSel.disabled = !on;
-    }
-
-    startBtn.addEventListener('click', startRace);
-    resetBtn.addEventListener('click', () => {
-      if (game && game.running) return; // ignore during race
-      tracksWrap.innerHTML = '';
-      logBox.innerHTML = '';
-      selected = new Set(['A','B','C']);
-      document.querySelectorAll('.chip').forEach((el, idx) => {
-        const id = el.dataset.id;
-        el.classList.toggle('active', selected.has(id));
-      });
-      obstaclesRange.value = 3;
-      difficultySel.value = 'normal';
-      raceLenSel.value = 'medium';
-    });
+    // Generate once at load
+    generateLadder();
   </script>
 </body>
 </html>

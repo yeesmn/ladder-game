@@ -1,107 +1,449 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AI 배틀 로열 시뮬레이터 - 졸라맨 버전</title>
+  <title>달리기 경주 관전 게임</title>
   <style>
-    body { margin:0; background:#0e0f1a; color:#fff; font-family:sans-serif; overflow:hidden; }
-    #cv { display:block; width:100vw; height:100vh; background:radial-gradient(circle at center, #1a1f38, #0e0f1a); }
-    #hud { position:absolute; top:10px; left:10px; background:rgba(0,0,0,0.4); padding:6px 10px; border-radius:8px; }
+    :root {
+      --bg: #0b1020;
+      --panel: #121933;
+      --ink: #e9f0ff;
+      --muted: #9fb2d0;
+      --accent: #7aa2ff;
+      --lane: #192349;
+      --finish: #ff7a7a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Noto Sans, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      color: var(--ink);
+      background: radial-gradient(1200px 600px at 20% -10%, #1a1f35 0%, #090e1f 60%, #040614 100%);
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+    }
+    header {
+      padding: 16px 20px;
+      display: flex; gap: 12px; align-items: center; justify-content: space-between;
+    }
+    .title { font-weight: 800; letter-spacing: .4px; }
+    .wrap {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 16px;
+      padding: 0 20px 20px 20px;
+    }
+    @media (max-width: 960px) {
+      .wrap { grid-template-columns: 1fr; }
+    }
+    .panel {
+      background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(0,0,0,0.06)), var(--panel);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+    .setup { padding: 16px; position: sticky; top: 12px; }
+    .setup h2 { margin: 4px 0 12px; font-size: 18px; color: var(--accent); }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .runner-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+    .chip {
+      user-select: none;
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: 6px;
+      padding: 10px 0; border-radius: 12px; border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04);
+      cursor: pointer;
+      font-weight: 700;
+      transition: transform .05s ease, background .2s ease, border-color .2s ease;
+    }
+    .chip input { display: none; }
+    .chip .dot { width: 10px; height: 10px; border-radius: 999px; }
+    .chip.active { background: rgba(122,162,255,.15); border-color: rgba(122,162,255,.6); transform: translateY(-1px); }
+
+    .control { margin: 12px 0; }
+    .control label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+    .control input[type="range"] { width: 100%; }
+    .btn {
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.12);
+      color: white; font-weight: 800; letter-spacing: .3px;
+      background: linear-gradient(180deg, #2d46a3, #193074);
+      cursor: pointer;
+      transition: transform .05s ease, filter .2s ease, box-shadow .2s ease;
+      box-shadow: 0 6px 16px rgba(14, 27, 74, .6);
+    }
+    .btn:disabled { filter: grayscale(1) brightness(0.6); cursor: not-allowed; }
+    .btn:hover:not(:disabled) { filter: brightness(1.05); }
+    .btn:active:not(:disabled) { transform: translateY(1px); }
+
+    .track-area { padding: 16px; display: grid; gap: 14px; }
+    .legend { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }
+    .legend .key { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+    .legend .icon { width: 10px; height: 10px; border-radius: 2px; }
+
+    .track { position: relative; height: 74px; background: var(--lane); border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,.08); }
+    .lane-label { position: absolute; left: 8px; top: 8px; font-weight: 900; opacity: .9; text-shadow: 0 1px 0 rgba(0,0,0,.6); }
+    .finish-line { position: absolute; top: 0; bottom: 0; width: 8px; right: 16px; background: repeating-linear-gradient( to bottom, var(--finish) 0 10px, #ffffff 10px 20px ); box-shadow: inset 0 0 0 1px rgba(255,255,255,.25); }
+    .runner { position: absolute; top: 50%; transform: translate(0, -50%); width: 44px; height: 44px; border-radius: 999px; display: grid; place-items: center; font-weight: 900; color: #0c0c0c; text-shadow: 0 1px 0 rgba(255,255,255,.3); box-shadow: 0 8px 20px rgba(0,0,0,.35); }
+    .runner .bubble { position: absolute; top: -26px; font-size: 12px; color: #fff; background: rgba(0,0,0,.55); padding: 2px 6px; border-radius: 6px; opacity: 0; transform: translateY(-6px); transition: opacity .2s ease, transform .2s ease; white-space: nowrap; }
+    .runner.flash .bubble { opacity: 1; transform: translateY(0); }
+
+    .item { position: absolute; top: 50%; transform: translate(-50%, -50%); width: 28px; height: 28px; border-radius: 6px; display: grid; place-items: center; font-size: 16px; filter: drop-shadow(0 2px 8px rgba(0,0,0,.35)); }
+    .item.hurdle { background: #ff9f43; }
+    .item.puddle { background: #0ea5e9; }
+    .item.turbo { background: #22c55e; }
+    .item.coin { background: #facc15; }
+
+    .log { padding: 12px; font-size: 13px; max-height: 240px; overflow: auto; border-top: 1px solid rgba(255,255,255,.06); }
+    .log p { margin: 6px 0; color: var(--muted); }
+
+    .toast { position: fixed; inset: auto 16px 16px auto; background: rgba(21,27,54,.95); border: 1px solid rgba(255,255,255,.08); padding: 10px 14px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.35); display: none; }
+    .toast.show { display: block; animation: pop .2s ease; }
+    @keyframes pop { from { transform: scale(.96); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+    .footer { padding: 8px 20px 20px; color: var(--muted); font-size: 12px; text-align: center; }
   </style>
 </head>
 <body>
-  <canvas id="cv"></canvas>
-  <div id="hud">Alive: <span id="alive">0</span></div>
+  <header>
+    <div class="title">🏁 달리기 경주 관전 게임</div>
+    <div style="opacity:.7; font-size:13px">선수 선택 → 시작 버튼 → 우승자 관전</div>
+  </header>
 
-<script>
-const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
-function fit(){cv.width=innerWidth; cv.height=innerHeight;} window.onresize=fit; fit();
+  <div class="wrap">
+    <!-- Left: Setup -->
+    <section class="panel setup" id="setup">
+      <h2>선수 선택</h2>
+      <div class="runner-grid" id="runnerGrid"></div>
 
-class Vec2{constructor(x=0,y=0){this.x=x;this.y=y;} add(v){this.x+=v.x;this.y+=v.y;return this;} sub(v){this.x-=v.x;this.y-=v.y;return this;} scale(s){this.x*=s;this.y*=s;return this;} len(){return Math.hypot(this.x,this.y);} norm(){const l=this.len()||1;this.x/=l;this.y/=l;return this;} clone(){return new Vec2(this.x,this.y);} }
+      <div class="control">
+        <label for="obstacles">장애물 수 (각 레인)</label>
+        <input type="range" id="obstacles" min="0" max="6" value="3" />
+      </div>
 
-class Fighter{
-  constructor(id){
-    this.id=id;
-    this.pos=new Vec2((Math.random()-0.5)*300,(Math.random()-0.5)*300);
-    this.vel=new Vec2();
-    this.hp=100;
-    this.alive=true;
-    this.target=null;
-    this.color=`hsl(${id*40%360},80%,60%)`;
-    this.radius=14;
-  }
-  update(dt){
-    if(!this.alive) return;
-    if(!this.target || !this.target.alive){ this.findTarget(); }
-    if(this.target){
-      const dir=new Vec2(this.target.pos.x-this.pos.x,this.target.pos.y-this.pos.y);
-      const d=dir.len(); dir.norm();
-      if(d<30){
-        // 공격
-        this.target.hp-=30*dt;
-        if(this.target.hp<=0){this.target.alive=false;}
-      } else {
-        this.vel.x+=dir.x*50*dt;
-        this.vel.y+=dir.y*50*dt;
+      <div class="row">
+        <div class="control">
+          <label for="difficulty">난이도</label>
+          <select id="difficulty" style="width:100%; padding:10px; border-radius:10px; background: rgba(255,255,255,.06); color: var(--ink); border: 1px solid rgba(255,255,255,.12);">
+            <option value="easy">쉬움</option>
+            <option value="normal" selected>보통</option>
+            <option value="hard">어려움</option>
+          </select>
+        </div>
+        <div class="control">
+          <label for="raceLen">트랙 길이</label>
+          <select id="raceLen" style="width:100%; padding:10px; border-radius:10px; background: rgba(255,255,255,.06); color: var(--ink); border: 1px solid rgba(255,255,255,.12);">
+            <option value="short">짧음</option>
+            <option value="medium" selected>중간</option>
+            <option value="long">길음</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:8px; margin-top:8px;">
+        <button class="btn" id="startBtn">🏁 경주 시작</button>
+        <button class="btn" id="resetBtn" style="background: linear-gradient(180deg, #394866, #1f2a40);">↺ 초기화</button>
+      </div>
+
+      <div class="log" id="log"></div>
+    </section>
+
+    <!-- Right: Track -->
+    <section class="panel" style="display:flex; flex-direction:column;">
+      <div class="track-area" id="trackArea">
+        <div class="legend">
+          <span class="key"><span class="icon" style="background:#ff9f43"></span>허들</span>
+          <span class="key"><span class="icon" style="background:#0ea5e9"></span>물웅덩이</span>
+          <span class="key"><span class="icon" style="background:#22c55e"></span>터보</span>
+          <span class="key"><span class="icon" style="background:#facc15"></span>코인</span>
+        </div>
+        <div id="tracks"></div>
+      </div>
+    </section>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <div class="footer">Tip: 선수 2명 이상을 선택하면 더 재밌어요. 설정은 즉시 반영됩니다.</div>
+
+  <script>
+    // Runner presets
+    const RUNNERS = [
+      { id: 'A', color: '#E74C3C' },
+      { id: 'B', color: '#3498DB' },
+      { id: 'C', color: '#27AE60' },
+      { id: 'D', color: '#F1C40F' },
+      { id: 'E', color: '#9B59B6' },
+    ];
+
+    // DOM refs
+    const runnerGrid = document.getElementById('runnerGrid');
+    const startBtn = document.getElementById('startBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const tracksWrap = document.getElementById('tracks');
+    const logBox = document.getElementById('log');
+    const toast = document.getElementById('toast');
+
+    const obstaclesRange = document.getElementById('obstacles');
+    const difficultySel = document.getElementById('difficulty');
+    const raceLenSel = document.getElementById('raceLen');
+
+    // State
+    let selected = new Set(['A','B','C']);
+    let game = null; // will hold current race state
+
+    // Build runner chips
+    RUNNERS.forEach(r => {
+      const label = document.createElement('label');
+      label.className = 'chip' + (selected.has(r.id) ? ' active' : '');
+      label.dataset.id = r.id;
+      label.innerHTML = `<span class="dot" style="background:${r.color}"></span> ${r.id}
+                         <input type="checkbox" ${selected.has(r.id) ? 'checked' : ''}/>`;
+      label.addEventListener('click', e => {
+        // ignore when clicking while running
+        if (game && game.running) return;
+        const id = label.dataset.id;
+        if (selected.has(id)) selected.delete(id); else selected.add(id);
+        label.classList.toggle('active');
+      });
+      runnerGrid.appendChild(label);
+    });
+
+    function log(msg) {
+      const p = document.createElement('p');
+      const t = new Date().toLocaleTimeString();
+      p.textContent = `[${t}] ${msg}`;
+      logBox.prepend(p);
+    }
+
+    function showToast(msg) {
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 1400);
+    }
+
+    function createTrackRow(laneIndex, runner) {
+      const row = document.createElement('div');
+      row.className = 'track';
+      row.dataset.runner = runner.id;
+
+      const label = document.createElement('div');
+      label.className = 'lane-label';
+      label.textContent = `선수 ${runner.id}`;
+      row.appendChild(label);
+
+      const finish = document.createElement('div');
+      finish.className = 'finish-line';
+      row.appendChild(finish);
+
+      // Runner token
+      const tok = document.createElement('div');
+      tok.className = 'runner';
+      tok.style.background = runner.color;
+      tok.innerHTML = `<div class="letter">${runner.id}</div><div class="bubble"></div>`;
+      row.appendChild(tok);
+
+      return { row, tok };
+    }
+
+    function spawnItems(rowEl, count, finishX) {
+      const items = [];
+      const types = ['hurdle','puddle','turbo','coin'];
+      for (let i = 0; i < count; i++) {
+        const t = types[Math.floor(Math.random()*types.length)];
+        const x = 40 + Math.random() * (finishX - 100); // keep clear of edges
+        const el = document.createElement('div');
+        el.className = `item ${t}`;
+        el.style.left = `${x}px`;
+        el.innerHTML = t === 'hurdle' ? '🧱' : t === 'puddle' ? '💧' : t === 'turbo' ? '⚡' : '🪙';
+        rowEl.appendChild(el);
+        items.push({ type: t, x, hit: false, el });
       }
+      return items;
     }
-    // 이동
-    this.pos.add(this.vel.clone().scale(dt));
-    this.vel.scale(0.9);
-  }
-  findTarget(){
-    let best=null,bd=1e9;
-    for(const f of fighters){
-      if(f===this||!f.alive) continue;
-      const d=new Vec2(f.pos.x-this.pos.x,f.pos.y-this.pos.y).len();
-      if(d<bd){bd=d;best=f;}
+
+    function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+
+    function startRace() {
+      if (selected.size < 2) {
+        showToast('선수를 2명 이상 선택해 주세요.');
+        return;
+      }
+
+      // Reset track area
+      tracksWrap.innerHTML = '';
+      logBox.innerHTML = '';
+
+      // Config
+      const diff = difficultySel.value; // easy, normal, hard
+      const lenOpt = raceLenSel.value; // short, medium, long
+      const perLaneItems = Number(obstaclesRange.value);
+
+      const baseSpeed = diff === 'easy' ? 1.5 : diff === 'normal' ? 1.8 : 2.0; // px per tick
+      const jitter = diff === 'easy' ? 0.6 : diff === 'normal' ? 0.9 : 1.2;
+      const tickMs = 16; // 60 fps-ish
+      const trackLengthPx = lenOpt === 'short' ? 720 : lenOpt === 'medium' ? 960 : 1200;
+
+      const lanes = Array.from(selected).map((id, idx) => {
+        const preset = RUNNERS.find(r => r.id === id);
+        const { row, tok } = createTrackRow(idx, preset);
+        tracksWrap.appendChild(row);
+        const finishX = row.clientWidth ? row.clientWidth - 28 : trackLengthPx; // fallback before layout
+        const items = spawnItems(row, perLaneItems, finishX);
+        return {
+          id,
+          color: preset.color,
+          x: 12, // starting x
+          yCenter: row.clientHeight / 2,
+          el: tok,
+          rowEl: row,
+          items,
+          effects: { slowUntil: 0, boostUntil: 0, stunUntil: 0 },
+          lastBubble: 0,
+          finishX: finishX - 44 /* token size */ - 16 /* finish offset */,
+        };
+      });
+
+      // If layout not measured yet, measure after a frame
+      requestAnimationFrame(() => {
+        lanes.forEach(l => {
+          const w = l.rowEl.clientWidth || trackLengthPx;
+          l.finishX = w - 44 - 16;
+          l.rowEl.querySelectorAll('.item').forEach(it => {
+            // already positioned in px based on earlier guess, good enough
+          });
+        });
+      });
+
+      let running = true;
+      let winner = null;
+      const startAt = performance.now();
+
+      function say(lane, text) {
+        const now = performance.now();
+        if (now - lane.lastBubble < 400) return; // avoid spam
+        lane.lastBubble = now;
+        const b = lane.el.querySelector('.bubble');
+        b.textContent = text;
+        lane.el.classList.add('flash');
+        setTimeout(() => lane.el.classList.remove('flash'), 420);
+      }
+
+      function applyItem(lane, item) {
+        if (item.hit) return;
+        item.hit = true;
+        switch (item.type) {
+          case 'hurdle': {
+            lane.effects.stunUntil = performance.now() + 800;
+            say(lane, '점프 실패');
+            log(`선수 ${lane.id} 허들에 걸림. 잠깐 멈춤`);
+            break;
+          }
+          case 'puddle': {
+            lane.effects.slowUntil = performance.now() + 1800;
+            say(lane, '미끄럽다');
+            log(`선수 ${lane.id} 물웅덩이로 감속`);
+            break;
+          }
+          case 'turbo': {
+            lane.effects.boostUntil = performance.now() + 1600;
+            say(lane, '터보!');
+            log(`선수 ${lane.id} 터보 발동`);
+            break;
+          }
+          case 'coin': {
+            lane.x += 14; // 작은 즉시 부스트
+            say(lane, '+코인');
+            log(`선수 ${lane.id} 코인 획득`);
+            break;
+          }
+        }
+        item.el.style.opacity = .35;
+        item.el.style.transform += ' scale(.9)';
+      }
+
+      function tick() {
+        if (!running) return;
+        const now = performance.now();
+
+        for (const lane of lanes) {
+          // effects
+          const stunned = now < lane.effects.stunUntil;
+          const slowed = now < lane.effects.slowUntil;
+          const boosted = now < lane.effects.boostUntil;
+
+          // current speed base
+          const base = baseSpeed + (Math.random() - 0.5) * jitter;
+          let speed = base;
+          if (slowed) speed *= 0.45;
+          if (boosted) speed *= 1.65;
+          if (stunned) speed = 0;
+
+          lane.x = clamp(lane.x + speed, 12, lane.finishX + 1);
+          lane.el.style.left = lane.x + 'px';
+
+          // item collision check
+          for (const it of lane.items) {
+            if (!it.hit && lane.x + 22 >= it.x && lane.x <= it.x + 22) {
+              applyItem(lane, it);
+            }
+          }
+
+          // finish check
+          if (!winner && lane.x >= lane.finishX) {
+            winner = lane;
+            running = false;
+          }
+        }
+
+        if (running) {
+          requestAnimationFrame(tick);
+        } else if (winner) {
+          const elapsed = ((performance.now() - startAt) / 1000).toFixed(2);
+          say(winner, '우승!');
+          log(`우승자는 선수 ${winner.id}. 기록 ${elapsed}s`);
+          showToast(`🎉 우승: 선수 ${winner.id} (${elapsed}s)`);
+          startBtn.disabled = false;
+          enableSetup(true);
+        }
+      }
+
+      // position tokens at start vertically centered
+      lanes.forEach((l, i) => {
+        l.el.style.left = l.x + 'px';
+      });
+
+      // lock setup while running
+      startBtn.disabled = true;
+      enableSetup(false);
+      game = { running: true };
+      requestAnimationFrame(tick);
     }
-    this.target=best;
-  }
-  draw(ctx){
-    if(!this.alive){ ctx.globalAlpha=0.2; }
-    ctx.strokeStyle=this.color;
-    ctx.lineWidth=3;
-    ctx.beginPath();
-    // 몸통
-    ctx.moveTo(this.pos.x,this.pos.y);
-    ctx.lineTo(this.pos.x,this.pos.y+30);
-    // 팔다리
-    ctx.moveTo(this.pos.x,this.pos.y+30);
-    ctx.lineTo(this.pos.x-12,this.pos.y+50);
-    ctx.moveTo(this.pos.x,this.pos.y+30);
-    ctx.lineTo(this.pos.x+12,this.pos.y+50);
-    ctx.moveTo(this.pos.x,this.pos.y+15);
-    ctx.lineTo(this.pos.x-15,this.pos.y+25);
-    ctx.moveTo(this.pos.x,this.pos.y+15);
-    ctx.lineTo(this.pos.x+15,this.pos.y+25);
-    ctx.stroke();
-    // 머리
-    ctx.beginPath();
-    ctx.arc(this.pos.x,this.pos.y-10,10,0,Math.PI*2);
-    ctx.stroke();
-    ctx.globalAlpha=1;
-  }
-}
 
-let fighters=[];
-for(let i=0;i<20;i++) fighters.push(new Fighter(i));
+    function enableSetup(on) {
+      document.querySelectorAll('.chip').forEach(el => el.style.pointerEvents = on ? 'auto' : 'none');
+      obstaclesRange.disabled = !on;
+      difficultySel.disabled = !on;
+      raceLenSel.disabled = !on;
+    }
 
-const hudAlive=document.getElementById('alive');
-
-let last=performance.now();
-function loop(){
-  const now=performance.now();
-  const dt=(now-last)/1000; last=now;
-  ctx.clearRect(0,0,cv.width,cv.height);
-  ctx.save(); ctx.translate(cv.width/2,cv.height/2);
-  for(const f of fighters){ f.update(dt); f.draw(ctx); }
-  ctx.restore();
-  hudAlive.textContent=fighters.filter(f=>f.alive).length;
-  requestAnimationFrame(loop);
-}
-loop();
-</script>
+    startBtn.addEventListener('click', startRace);
+    resetBtn.addEventListener('click', () => {
+      if (game && game.running) return; // ignore during race
+      tracksWrap.innerHTML = '';
+      logBox.innerHTML = '';
+      selected = new Set(['A','B','C']);
+      document.querySelectorAll('.chip').forEach((el, idx) => {
+        const id = el.dataset.id;
+        el.classList.toggle('active', selected.has(id));
+      });
+      obstaclesRange.value = 3;
+      difficultySel.value = 'normal';
+      raceLenSel.value = 'medium';
+    });
+  </script>
 </body>
 </html>

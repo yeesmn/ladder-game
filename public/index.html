@@ -3,24 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>달리기 경주 게임</title>
+  <title>달리기 게임</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="container">
-    <h1>달리기 경주 게임</h1>
-    <div class="setup">
-      <div>
-        <h2>선수 목록</h2>
-        <ul id="runnerList"></ul>
-      </div>
-      <div>
-        <input id="newRunner" placeholder="새 선수 이름 입력" />
-        <button id="addRunner">선수 추가</button>
-      </div>
-      <button id="startRace">경주 시작</button>
+  <div class="game-container">
+    <div class="background" id="background"></div>
+    <div class="player" id="player"></div>
+    <div class="obstacles" id="obstacles"></div>
+    <div class="ui">
+      <div>거리: <span id="distance">0</span> m</div>
+      <div>시간: <span id="time">0.0</span> s</div>
     </div>
-    <div class="race-track" id="raceTrack"></div>
   </div>
   <script src="script.js"></script>
 </body>

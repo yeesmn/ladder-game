@@ -3,371 +3,105 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AI 배틀 로열 시뮬레이터</title>
+  <title>AI 배틀 로열 시뮬레이터 - 졸라맨 버전</title>
   <style>
-    :root{
-      --bg1:#0f1226; --bg2:#191f3b; --ring:#2de2e6; --ring2:#ff6ad5; --text:#eef2ff; --muted:#a6b0cd;
-      --good:#93ffa1; --warn:#ffd37e; --bad:#ff7b7b;
-    }
-    html,body{height:100%;margin:0;background:radial-gradient(120% 140% at 50% 20%, var(--bg2), var(--bg1));color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
-    .wrap{height:100%;display:grid;grid-template-rows:auto 1fr auto;gap:10px;padding:14px;box-sizing:border-box}
-    header{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
-    .brand{display:flex;align-items:center;gap:10px;font-weight:800}
-    .brand .dot{width:10px;height:10px;border-radius:50%;background:var(--ring);box-shadow:0 0 16px rgba(45,226,230,.6)}
-    .hud{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-    .pill{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);font-weight:700}
-    .panel{position:relative;display:grid;grid-template-columns:1fr 300px;gap:14px;min-height:0}
-    .board{position:relative;border:1px solid rgba(255,255,255,.12);border-radius:20px;overflow:hidden;background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.02))}
-    canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
-    .side{display:grid;grid-template-rows:auto 1fr;gap:10px}
-    .card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:10px}
-    .controls{display:grid;gap:8px}
-    .row{display:flex;align-items:center;justify-content:space-between;gap:10px}
-    input[type="range"]{width:140px}
-    .btn{cursor:pointer;padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:var(--text);font-weight:800}
-    .btn:active{transform:translateY(1px)}
-    .log{font-size:13px;color:var(--muted);height:100%;overflow:auto;white-space:pre-wrap}
-    footer{display:flex;align-items:center;justify-content:space-between;color:var(--muted);font-size:13px}
-    .aliveList{display:grid;gap:6px;max-height:240px;overflow:auto}
-    .fighterItem{display:flex;align-items:center;gap:8px}
-    .chip{width:10px;height:10px;border-radius:50%}
-    .hpbar{flex:1;height:6px;background:rgba(255,255,255,.12);border-radius:999px;overflow:hidden}
-    .hpbar>span{display:block;height:100%;background:linear-gradient(90deg,var(--good),var(--warn));}
+    body { margin:0; background:#0e0f1a; color:#fff; font-family:sans-serif; overflow:hidden; }
+    #cv { display:block; width:100vw; height:100vh; background:radial-gradient(circle at center, #1a1f38, #0e0f1a); }
+    #hud { position:absolute; top:10px; left:10px; background:rgba(0,0,0,0.4); padding:6px 10px; border-radius:8px; }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <header>
-      <div class="brand"><span class="dot"></span>AI Battle Royale</div>
-      <div class="hud">
-        <div class="pill">남은 인원 <span id="hudAlive">0</span></div>
-        <div class="pill">라운드 <span id="hudRound">1</span></div>
-        <div class="pill">상태 <span id="hudState">Ready</span></div>
-        <div class="pill">속도 <span id="hudSpeed">1.0x</span></div>
-      </div>
-    </header>
-
-    <main class="panel">
-      <section class="board">
-        <canvas id="cv"></canvas>
-      </section>
-      <aside class="side">
-        <div class="card controls">
-          <div class="row"><button class="btn" id="btnStart">시작</button><button class="btn" id="btnPause">일시정지</button><button class="btn" id="btnReset">리셋</button></div>
-          <div class="row"><label>인원수</label><input type="range" id="rangeN" min="4" max="60" value="20"><span id="labelN">20</span></div>
-          <div class="row"><label>속도</label><input type="range" id="rangeSpeed" min="1" max="6" value="2"><span id="labelSpeed">2</span></div>
-          <div class="row"><label>시드</label><input id="seed" value="random"><button class="btn" id="btnReseed">재시드</button></div>
-          <div class="row"><label>룰</label><select id="rule">
-            <option value="ringout">링 아웃 + 체력</option>
-            <option value="hp">체력만</option>
-          </select></div>
-        </div>
-        <div class="card">
-          <strong>생존자</strong>
-          <div class="aliveList" id="aliveList"></div>
-        </div>
-        <div class="card">
-          <strong>로그</strong>
-          <div class="log" id="log"></div>
-        </div>
-      </aside>
-    </main>
-
-    <footer>
-      <div>모든 전투원은 비슷한 능력치로 생성. AI가 자율 전투하고 마지막 1인이 승리</div>
-      <div>키: 스페이스 시작/일시정지</div>
-    </footer>
-  </div>
+  <canvas id="cv"></canvas>
+  <div id="hud">Alive: <span id="alive">0</span></div>
 
 <script>
-// ======= RNG =======
-function Mulberry32(seed){
-  let t = seed >>> 0;
-  return function(){ t += 0x6D2B79F5; let r = Math.imul(t ^ t >>> 15, 1 | t); r ^= r + Math.imul(r ^ r >>> 7, 61 | r); return ((r ^ r >>> 14) >>> 0) / 4294967296 }
-}
-function strToSeed(str){
-  if(!str || str.toLowerCase()==='random') return (Math.random()*1e9)|0;
-  let h=2166136261>>>0; for(let i=0;i<str.length;i++){h^=str.charCodeAt(i); h=Math.imul(h,16777619);} return h>>>0;
-}
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+function fit(){cv.width=innerWidth; cv.height=innerHeight;} window.onresize=fit; fit();
 
-// ======= Canvas setup =======
-const cv = document.getElementById('cv');
-const ctx = cv.getContext('2d');
-const DPR = Math.min(devicePixelRatio||1, 2);
-let W=800,H=800;
-function fit(){
-  const rect = cv.parentElement.getBoundingClientRect();
-  W = rect.width; H = rect.height;
-  cv.width = Math.floor(W*DPR); cv.height = Math.floor(H*DPR);
-  ctx.setTransform(DPR,0,0,DPR,0,0);
-}
-new ResizeObserver(fit).observe(cv.parentElement);
-
-// ======= World =======
-const world = {running:false, round:1, speed:1, rule:'ringout'};
-let rng = Mulberry32(1234);
-let fighters = []; // alive list
-let dead = [];
-
-// ring
-const ring = {x:0,y:0,r:310, wall: 2000}; // wall strength
-
-// UI
-const hudAlive = document.getElementById('hudAlive');
-const hudRound = document.getElementById('hudRound');
-const hudState = document.getElementById('hudState');
-const hudSpeed = document.getElementById('hudSpeed');
-const logEl = document.getElementById('log');
-const aliveListEl = document.getElementById('aliveList');
-
-const btnStart = document.getElementById('btnStart');
-const btnPause = document.getElementById('btnPause');
-const btnReset = document.getElementById('btnReset');
-const btnReseed = document.getElementById('btnReseed');
-const rangeN = document.getElementById('rangeN');
-const labelN = document.getElementById('labelN');
-const rangeSpeed = document.getElementById('rangeSpeed');
-const labelSpeed = document.getElementById('labelSpeed');
-const seedInput = document.getElementById('seed');
-const ruleSel = document.getElementById('rule');
-
-rangeN.oninput = ()=> labelN.textContent = rangeN.value;
-rangeSpeed.oninput = ()=> { labelSpeed.textContent = rangeSpeed.value; setSpeed(parseInt(rangeSpeed.value)); };
-btnStart.onclick= ()=> start();
-btnPause.onclick= ()=> toggle();
-btnReset.onclick= ()=> reset();
-btnReseed.onclick= ()=> { seedInput.value='random'; reset(); };
-ruleSel.onchange= ()=> { world.rule = ruleSel.value; };
-
-window.addEventListener('keydown', (e)=>{ if(e.code==='Space'){ toggle(); }});
-
-function setSpeed(s){ world.speed = [0, .5, 1, 1.5, 2, 3, 4][s] || 1; hudSpeed.textContent = world.speed.toFixed(1)+'x'; }
-
-function log(msg){
-  const t = new Date().toLocaleTimeString();
-  logEl.textContent += `[${t}] ${msg}\n`;
-  logEl.scrollTop = logEl.scrollHeight;
-}
-
-// ======= Fighter =======
-let nextId = 1;
-function colorFromIndex(i){
-  const hue = (i*137.5)%360; return `hsl(${hue} 85% 65%)`;
-}
-class Vec2{ constructor(x=0,y=0){this.x=x;this.y=y} add(v){this.x+=v.x;this.y+=v.y;return this} sub(v){this.x-=v.x;this.y-=v.y;return this} scale(s){this.x*=s;this.y*=s;return this} len(){return Math.hypot(this.x,this.y)} norm(){const l=this.len()||1;this.x/=l;this.y/=l;return this} clone(){return new Vec2(this.x,this.y)} }
+class Vec2{constructor(x=0,y=0){this.x=x;this.y=y;} add(v){this.x+=v.x;this.y+=v.y;return this;} sub(v){this.x-=v.x;this.y-=v.y;return this;} scale(s){this.x*=s;this.y*=s;return this;} len(){return Math.hypot(this.x,this.y);} norm(){const l=this.len()||1;this.x/=l;this.y/=l;return this;} clone(){return new Vec2(this.x,this.y);} }
 
 class Fighter{
-  constructor(i){
-    this.id = nextId++;
-    this.name = `F${this.id}`;
-    this.col = colorFromIndex(i);
-    // 비슷한 능력치: 평균에서 작은 분산
-    const jitter = ()=> (rng()-0.5)*0.1; // ±5%
-    this.speed = 120 * (1 + jitter());
-    this.radius = 10;
-    this.range = 22; // 공격 거리
-    this.damage = 12 * (1 + jitter());
-    this.maxHp = 100 * (1 + jitter());
-    this.hp = this.maxHp;
-    this.cd = 0; // 공격 쿨다운
-    this.cdMax = 0.45 * (1 + jitter());
-    this.knock = 130 * (1 + jitter());
-    // 위치와 속도 무작위 배치
-    const a = rng()*Math.PI*2; const r = ring.r * Math.sqrt(rng()*0.85); // 너무 가장자리는 피함
-    this.pos = new Vec2(r*Math.cos(a), r*Math.sin(a));
-    const a2 = rng()*Math.PI*2; this.vel = new Vec2(Math.cos(a2),Math.sin(a2)).scale(this.speed*0.3);
-    this.alive = true; this.kills = 0;
-    this.targetId = 0; // 현재 추적 중인 대상 id
+  constructor(id){
+    this.id=id;
+    this.pos=new Vec2((Math.random()-0.5)*300,(Math.random()-0.5)*300);
+    this.vel=new Vec2();
+    this.hp=100;
+    this.alive=true;
+    this.target=null;
+    this.color=`hsl(${id*40%360},80%,60%)`;
+    this.radius=14;
   }
-}
-
-function distance(a,b){ const dx=a.x-b.x, dy=a.y-b.y; return Math.hypot(dx,dy); }
-
-// ======= Game lifecycle =======
-function init(){
-  fit();
-  const n = parseInt(rangeN.value);
-  nextId = 1; fighters = []; dead = []; world.round = 1; world.rule = ruleSel.value;
-  rng = Mulberry32(strToSeed(seedInput.value));
-  for(let i=0;i<n;i++) fighters.push(new Fighter(i));
-  hudState.textContent = 'Ready';
-  hudRound.textContent = world.round;
-  updateAliveHUD();
-  refreshAliveList();
-  log('새 라운드가 시작됨');
-}
-
-function start(){ world.running = true; hudState.textContent = 'Running'; }
-function toggle(){ world.running = !world.running; hudState.textContent = world.running ? 'Running' : 'Paused'; }
-function reset(){ init(); draw(); }
-
-function updateAliveHUD(){ hudAlive.textContent = fighters.filter(f=>f.alive).length; }
-
-function refreshAliveList(){
-  const alive = fighters.filter(f=>f.alive).sort((a,b)=> b.hp/b.maxHp - a.hp/a.maxHp);
-  aliveListEl.innerHTML = '';
-  for(const f of alive){
-    const row = document.createElement('div'); row.className = 'fighterItem';
-    const chip = document.createElement('span'); chip.className='chip'; chip.style.background = f.col; row.appendChild(chip);
-    const name = document.createElement('span'); name.textContent = `${f.name}`; row.appendChild(name);
-    const hpbar = document.createElement('div'); hpbar.className='hpbar'; const bar = document.createElement('span'); bar.style.width = Math.max(0, (f.hp/f.maxHp*100)).toFixed(0)+'%'; hpbar.appendChild(bar); row.appendChild(hpbar);
-    aliveListEl.appendChild(row);
-  }
-}
-
-// ======= AI =======
-function chooseTarget(i){
-  const me = fighters[i];
-  let best=null, bestD=1e9;
-  for(let j=0;j<fighters.length;j++){
-    if(i===j) continue; const f=fighters[j]; if(!f.alive) continue;
-    const d = distance(me.pos, f.pos);
-    if(d<bestD){bestD=d; best=f;}
-  }
-  me.targetId = best? best.id : 0;
-}
-
-function getById(id){ return fighters.find(f=>f.id===id); }
-
-function stepAI(dt){
-  // 목표 재선택 약간의 확률로 수행
-  for(let i=0;i<fighters.length;i++){
-    const f = fighters[i]; if(!f.alive) continue;
-    if(!f.targetId || (rng()<0.02)) chooseTarget(i);
-    const t = getById(f.targetId); if(!t || !t.alive){ chooseTarget(i); continue; }
-    const to = new Vec2(t.pos.x - f.pos.x, t.pos.y - f.pos.y); const d = to.len();
-    to.norm();
-    // 간단한 이동: 가까우면 약간 원을 그리듯이 측면 이동으로 겹침 방지
-    const side = new Vec2(-to.y, to.x).scale((rng()-0.5)*0.3);
-    const desired = to.clone().add(side).norm().scale(f.speed);
-    // 가속 대신 속도 보간
-    f.vel.x += (desired.x - f.vel.x) * 0.08;
-    f.vel.y += (desired.y - f.vel.y) * 0.08;
-    // 공격
-    f.cd = Math.max(0, f.cd - dt);
-    if(d < f.range && f.cd===0){
-      // 타격 성공 확률: 85% + 약간 운
-      const hit = rng() < 0.85 + (rng()-0.5)*0.06;
-      f.cd = f.cdMax;
-      if(hit){
-        const dmg = f.damage * (0.9 + (rng()*0.2));
-        t.hp -= dmg;
-        // 넉백
-        const n = new Vec2(t.pos.x - f.pos.x, t.pos.y - f.pos.y).norm();
-        t.vel.x += n.x * f.knock * (0.7 + rng()*0.6);
-        t.vel.y += n.y * f.knock * (0.7 + rng()*0.6);
-        // 살짝 반작용
-        f.vel.x -= n.x * f.knock * 0.25;
-        f.vel.y -= n.y * f.knock * 0.25;
-        // 기록
-        if(t.hp<=0 && t.alive){ t.alive=false; f.kills++; onEliminated(t, f, 'KO'); }
+  update(dt){
+    if(!this.alive) return;
+    if(!this.target || !this.target.alive){ this.findTarget(); }
+    if(this.target){
+      const dir=new Vec2(this.target.pos.x-this.pos.x,this.target.pos.y-this.pos.y);
+      const d=dir.len(); dir.norm();
+      if(d<30){
+        // 공격
+        this.target.hp-=30*dt;
+        if(this.target.hp<=0){this.target.alive=false;}
+      } else {
+        this.vel.x+=dir.x*50*dt;
+        this.vel.y+=dir.y*50*dt;
       }
     }
-  }
-}
-
-function integrate(dt){
-  // 링 경계 처리 및 마찰
-  for(const f of fighters){ if(!f.alive) continue;
     // 이동
-    f.pos.add(f.vel.clone().scale(dt));
-    // 마찰로 속도 감소
-    f.vel.scale(0.985);
-
-    // 충돌: 서로 겹치면 밀어냄
-    for(const g of fighters){ if(g===f || !g.alive) continue; const dx=f.pos.x-g.pos.x, dy=f.pos.y-g.pos.y; const d=Math.hypot(dx,dy); const minD=f.radius+g.radius; if(d>0 && d<minD){ const n=new Vec2(dx/d, dy/d); const push=(minD-d)*0.5; f.pos.x+=n.x*push; f.pos.y+=n.y*push; g.pos.x-=n.x*push; g.pos.y-=n.y*push; }}
-
-    // 링 벽: 원의 바깥이면 반발
-    const dFromCenter = Math.hypot(f.pos.x, f.pos.y);
-    if(world.rule==='ringout'){
-      if(dFromCenter > ring.r + 18){ // 약간의 여유
-        f.alive=false; onEliminated(f, null, 'Ring Out'); continue;
-      }
+    this.pos.add(this.vel.clone().scale(dt));
+    this.vel.scale(0.9);
+  }
+  findTarget(){
+    let best=null,bd=1e9;
+    for(const f of fighters){
+      if(f===this||!f.alive) continue;
+      const d=new Vec2(f.pos.x-this.pos.x,f.pos.y-this.pos.y).len();
+      if(d<bd){bd=d;best=f;}
     }
-    // 벽 반발
-    if(dFromCenter > ring.r - f.radius){
-      const n = new Vec2(f.pos.x, f.pos.y).norm();
-      // 위치 보정
-      f.pos.x = n.x * (ring.r - f.radius);
-      f.pos.y = n.y * (ring.r - f.radius);
-      // 속도를 안쪽으로 반사
-      const vn = f.vel.x*n.x + f.vel.y*n.y;
-      if(vn>0){
-        f.vel.x -= n.x * (vn*1.8);
-        f.vel.y -= n.y * (vn*1.8);
-      }
-    }
+    this.target=best;
+  }
+  draw(ctx){
+    if(!this.alive){ ctx.globalAlpha=0.2; }
+    ctx.strokeStyle=this.color;
+    ctx.lineWidth=3;
+    ctx.beginPath();
+    // 몸통
+    ctx.moveTo(this.pos.x,this.pos.y);
+    ctx.lineTo(this.pos.x,this.pos.y+30);
+    // 팔다리
+    ctx.moveTo(this.pos.x,this.pos.y+30);
+    ctx.lineTo(this.pos.x-12,this.pos.y+50);
+    ctx.moveTo(this.pos.x,this.pos.y+30);
+    ctx.lineTo(this.pos.x+12,this.pos.y+50);
+    ctx.moveTo(this.pos.x,this.pos.y+15);
+    ctx.lineTo(this.pos.x-15,this.pos.y+25);
+    ctx.moveTo(this.pos.x,this.pos.y+15);
+    ctx.lineTo(this.pos.x+15,this.pos.y+25);
+    ctx.stroke();
+    // 머리
+    ctx.beginPath();
+    ctx.arc(this.pos.x,this.pos.y-10,10,0,Math.PI*2);
+    ctx.stroke();
+    ctx.globalAlpha=1;
   }
 }
 
-function onEliminated(victim, killer, reason){
-  dead.push(victim);
-  log(`${victim.name} 탈락 (${reason})` + (killer? ` — ${killer.name}의 킬` : ''));
-  updateAliveHUD();
-  refreshAliveList();
-  // 승자 판정
-  const alive = fighters.filter(f=>f.alive);
-  if(alive.length===1){
-    const winner = alive[0];
-    world.running=false;
-    hudState.textContent = 'Winner';
-    log(`우승자는 ${winner.name}! 킬 ${winner.kills}`);
-  }
-  if(alive.length===0){ world.running=false; hudState.textContent='Draw'; log('전원 탈락으로 무승부'); }
-}
+let fighters=[];
+for(let i=0;i<20;i++) fighters.push(new Fighter(i));
 
-// ======= Render =======
-function draw(){
-  ctx.clearRect(0,0,W,H);
-  // 중심 이동
-  ctx.save();
-  ctx.translate(W*0.5, H*0.5);
+const hudAlive=document.getElementById('alive');
 
-  // 링 바닥
-  const grad = ctx.createRadialGradient(0,0,0, 0,0, ring.r+60);
-  grad.addColorStop(0,'rgba(255,255,255,.06)');
-  grad.addColorStop(1,'rgba(255,255,255,.01)');
-  ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(0,0, ring.r+60, 0, Math.PI*2); ctx.fill();
-
-  // 링 라인
-  ctx.lineWidth = 8; ctx.strokeStyle = 'rgba(45,226,230,.7)';
-  ctx.beginPath(); ctx.arc(0,0, ring.r, 0, Math.PI*2); ctx.stroke();
-  ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,106,213,.5)';
-  ctx.beginPath(); ctx.arc(0,0, ring.r-14, 0, Math.PI*2); ctx.stroke();
-
-  // 전투원
-  for(const f of fighters){ if(!f.alive) continue;
-    // 본체
-    ctx.fillStyle = f.col; ctx.beginPath(); ctx.arc(f.pos.x, f.pos.y, f.radius, 0, Math.PI*2); ctx.fill();
-    // HP 테두리
-    ctx.lineWidth = 3; const hpRatio = Math.max(0,f.hp/f.maxHp); ctx.strokeStyle = hpRatio>0.5? 'rgba(147,255,161,.9)' : hpRatio>0.25? 'rgba(255,211,126,.9)' : 'rgba(255,123,123,.9)';
-    ctx.beginPath(); ctx.arc(f.pos.x, f.pos.y, f.radius+3, -Math.PI*0.5, -Math.PI*0.5 + Math.PI*2*hpRatio); ctx.stroke();
-    // 이름
-    ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.font = '700 12px ui-sans-serif'; ctx.textAlign='center'; ctx.fillText(f.name, f.pos.x, f.pos.y - f.radius - 8);
-  }
-
-  // 죽은 자 표시 희미하게
-  ctx.globalAlpha = 0.25;
-  for(const f of dead){ ctx.fillStyle = f.col; ctx.beginPath(); ctx.arc(f.pos.x, f.pos.y, f.radius*0.8, 0, Math.PI*2); ctx.fill(); }
-  ctx.globalAlpha = 1;
-
-  ctx.restore();
-}
-
-// ======= Main Loop =======
 let last=performance.now();
 function loop(){
-  const now = performance.now();
-  let dt = Math.min(0.05, (now-last)/1000); last=now;
-  dt *= world.speed;
-  if(world.running){ stepAI(dt); integrate(dt); refreshAliveList(); }
-  draw();
+  const now=performance.now();
+  const dt=(now-last)/1000; last=now;
+  ctx.clearRect(0,0,cv.width,cv.height);
+  ctx.save(); ctx.translate(cv.width/2,cv.height/2);
+  for(const f of fighters){ f.update(dt); f.draw(ctx); }
+  ctx.restore();
+  hudAlive.textContent=fighters.filter(f=>f.alive).length;
   requestAnimationFrame(loop);
 }
-
-// ======= Start =======
-fit(); setSpeed(parseInt(rangeSpeed.value)); init(); draw(); loop();
-
+loop();
 </script>
 </body>
 </html>

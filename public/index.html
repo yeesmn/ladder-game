@@ -1,21 +1,775 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>달리기 게임</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>핀볼 게임 - HTML CSS JS</title>
+  <style>
+    :root {
+      --bg1: #0f1226;
+      --bg2: #1a2040;
+      --accent: #7cf6ff;
+      --accent2: #ff9cf3;
+      --glow: 0 0 24px rgba(124, 246, 255, 0.4);
+      --white: #f6f7fb;
+      --muted: #a8b1c7;
+      --danger: #ff6b6b;
+    }
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: radial-gradient(100% 120% at 50% 0%, var(--bg2), var(--bg1));
+      color: var(--white);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      user-select: none;
+      -webkit-user-select: none;
+      overflow: hidden;
+    }
+    .wrap {
+      height: 100%;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 10px;
+      padding: 14px 14px 10px;
+      box-sizing: border-box;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+    .brand .dot {
+      width: 10px; height: 10px; border-radius: 50%; background: var(--accent);
+      box-shadow: var(--glow);
+    }
+    .hud {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02);
+      font-weight: 600;
+    }
+    .pill small { color: var(--muted); font-weight: 500; }
+
+    .panel {
+      position: relative;
+      height: 100%;
+      display: grid;
+      place-items: center;
+    }
+    .frame {
+      position: relative;
+      width: min(92vw, 520px);
+      aspect-ratio: 9 / 15.5; /* 세로형 보드 */
+      border-radius: 24px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+      border: 1px solid rgba(255,255,255,0.12);
+      overflow: hidden;
+      box-shadow:
+        0 20px 60px rgba(0,0,0,0.45),
+        0 0 0 6px rgba(255,255,255,0.02) inset;
+    }
+    canvas#game {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      pointer-events: none;
+    }
+    .topbar, .bottombar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 10px 12px;
+    }
+    .badge {
+      pointer-events: auto;
+      padding: 6px 10px;
+      border-radius: 10px;
+      background: rgba(0,0,0,0.35);
+      border: 1px solid rgba(255,255,255,0.12);
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+    .btns {
+      display: flex; gap: 8px;
+    }
+    button.icon {
+      pointer-events: auto;
+      height: 36px; width: 36px;
+      display: grid; place-items: center;
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 10px;
+      background: rgba(255,255,255,0.07);
+      color: var(--white);
+      font-weight: 700;
+      cursor: pointer;
+    }
+    button.icon:active { transform: translateY(1px); }
+
+    footer {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .help kbd {
+      padding: 2px 6px; border: 1px solid rgba(255,255,255,0.2); border-bottom-width: 2px;
+      border-radius: 6px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-weight: 700; color: var(--white);
+      background: rgba(255,255,255,0.06);
+    }
+  </style>
 </head>
 <body>
-  <div class="game-container">
-    <div class="background" id="background"></div>
-    <div class="player" id="player"></div>
-    <div class="obstacles" id="obstacles"></div>
-    <div class="ui">
-      <div>거리: <span id="distance">0</span> m</div>
-      <div>시간: <span id="time">0.0</span> s</div>
-    </div>
+  <div class="wrap">
+    <header>
+      <div class="brand"><span class="dot"></span> <span>Pinball</span></div>
+      <div class="hud">
+        <div class="pill"><small>점수</small> <span id="hudScore">0</span></div>
+        <div class="pill"><small>라이프</small> <span id="hudLives">3</span></div>
+        <div class="pill"><small>상태</small> <span id="hudState">Ready</span></div>
+      </div>
+    </header>
+
+    <main class="panel">
+      <div class="frame">
+        <canvas id="game"></canvas>
+        <div class="overlay">
+          <div class="topbar">
+            <div class="badge" id="message">스페이스로 발사. ← → 로 플리퍼.</div>
+            <div class="btns">
+              <button class="icon" id="btnPause" title="일시정지 P">⏸</button>
+              <button class="icon" id="btnReset" title="리셋 R">⟲</button>
+            </div>
+          </div>
+          <div class="bottombar">
+            <div class="badge">모바일은 좌우 터치로 조작, 아래에서 위로 스와이프하면 발사</div>
+            <div class="badge" id="powerBadge">Power: 0%</div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer>
+      <div class="help">
+        키: <kbd>←</kbd> <kbd>→</kbd> 플리퍼, <kbd>Space</kbd> 발사, <kbd>P</kbd> 일시정지, <kbd>R</kbd> 리셋
+      </div>
+      <div>HTML CSS JS로 구현</div>
+    </footer>
   </div>
-  <script src="script.js"></script>
+
+  <script>
+  // ============================
+  // 유틸 벡터
+  // ============================
+  class Vec2 {
+    constructor(x=0, y=0){ this.x=x; this.y=y; }
+    clone(){ return new Vec2(this.x, this.y); }
+    add(v){ this.x+=v.x; this.y+=v.y; return this; }
+    sub(v){ this.x-=v.x; this.y-=v.y; return this; }
+    scale(s){ this.x*=s; this.y*=s; return this; }
+    dot(v){ return this.x*v.x + this.y*v.y; }
+    len(){ return Math.hypot(this.x, this.y); }
+    norm(){ const l=this.len()||1; this.x/=l; this.y/=l; return this; }
+    perp(){ return new Vec2(-this.y, this.x); }
+    static add(a,b){ return new Vec2(a.x+b.x, a.y+b.y); }
+    static sub(a,b){ return new Vec2(a.x-b.x, a.y-b.y); }
+    static scale(v,s){ return new Vec2(v.x*s, v.y*s); }
+  }
+
+  // ============================
+  // 전역 설정
+  // ============================
+  const DPR = Math.min(window.devicePixelRatio || 1, 2);
+  const BASE_W = 480; // 보드 폭 (월드 좌표)
+  const BASE_H = 830; // 보드 높이 (월드 좌표)
+  const GRAVITY = 2000; // px per s^2
+  const RESTITUTION = 0.9;
+  const AIR_DRAG = 0.0005; // 속도 비례 감쇠
+
+  // DOM
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const hudScore = document.getElementById('hudScore');
+  const hudLives = document.getElementById('hudLives');
+  const hudState = document.getElementById('hudState');
+  const msg = document.getElementById('message');
+  const btnPause = document.getElementById('btnPause');
+  const btnReset = document.getElementById('btnReset');
+  const powerBadge = document.getElementById('powerBadge');
+
+  // 캔버스 리사이즈 헬퍼
+  let viewScale = 1;
+  function resizeCanvas(){
+    const rect = canvas.parentElement.getBoundingClientRect();
+    // frame은 aspect ratio를 유지하므로, 실제 표시 크기에서 스케일 계산
+    const cssW = rect.width;
+    const cssH = rect.height;
+    viewScale = Math.min(cssW/BASE_W, cssH/BASE_H);
+    canvas.width = Math.floor(BASE_W * DPR);
+    canvas.height = Math.floor(BASE_H * DPR);
+    ctx.setTransform(DPR*viewScale, 0, 0, DPR*viewScale, 0, 0);
+  }
+  new ResizeObserver(resizeCanvas).observe(canvas.parentElement);
+
+  // ============================
+  // 게임 엔티티
+  // ============================
+  class Ball {
+    constructor(x, y){
+      this.pos = new Vec2(x, y);
+      this.vel = new Vec2(0, 0);
+      this.r = 12;
+      this.mass = 1;
+      this.color = '#eaff9c';
+      this.alive = true;
+      this.combo = 0; // 연속 점수 보너스
+    }
+    applyForce(ax, ay, dt){
+      this.vel.x += ax * dt;
+      this.vel.y += ay * dt;
+    }
+    integrate(dt){
+      // 중력
+      this.applyForce(0, GRAVITY, dt);
+      // 공기 저항
+      this.vel.x *= (1 - AIR_DRAG);
+      this.vel.y *= (1 - AIR_DRAG);
+      this.pos.x += this.vel.x * dt;
+      this.pos.y += this.vel.y * dt;
+    }
+    draw(ctx){
+      const g = ctx.createRadialGradient(this.pos.x - this.r*0.4, this.pos.y - this.r*0.6, this.r*0.2, this.pos.x, this.pos.y, this.r);
+      g.addColorStop(0, '#fff');
+      g.addColorStop(1, this.color);
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(this.pos.x, this.pos.y, this.r, 0, Math.PI*2);
+      ctx.fill();
+      // 윤광
+      ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+    }
+  }
+
+  class Segment {
+    // 선분 a-b, 충돌은 원과 선분 최근접점으로 처리
+    constructor(ax, ay, bx, by, opts={}){
+      this.a = new Vec2(ax, ay);
+      this.b = new Vec2(bx, by);
+      this.color = opts.color || 'rgba(255,255,255,0.35)';
+      this.width = opts.width || 6; // 시각용
+      this.restitution = opts.restitution ?? RESTITUTION;
+      this.score = opts.score || 1;
+    }
+    collideBall(ball, scoreCb){
+      // 최근접점 계산
+      const ab = Vec2.sub(this.b, this.a);
+      const ap = Vec2.sub(ball.pos, this.a);
+      const ab2 = ab.dot(ab);
+      let t = ab2 > 0 ? ap.dot(ab) / ab2 : 0;
+      t = Math.max(0, Math.min(1, t));
+      const closest = new Vec2(this.a.x + ab.x*t, this.a.y + ab.y*t);
+      const diff = Vec2.sub(ball.pos, closest);
+      const dist = diff.len();
+      const overlap = ball.r - dist;
+      if (overlap > 0){
+        // 정상화 노멀
+        const n = dist > 0 ? diff.scale(1/dist) : new Vec2(0, -1);
+        // 반발
+        const v = ball.vel;
+        const vn = v.dot(n);
+        if (vn < 0){
+          const bounce = -(1 + this.restitution) * vn;
+          v.x += bounce * n.x;
+          v.y += bounce * n.y;
+        } else {
+          // 관통만 보정
+        }
+        // 위치 보정
+        ball.pos.x += n.x * overlap;
+        ball.pos.y += n.y * overlap;
+        // 마찰 비스무리하게 축 직교 성분 약간 감쇠
+        const tangent = n.perp();
+        const vt = ball.vel.dot(tangent);
+        ball.vel.x -= vt * 0.05 * tangent.x;
+        ball.vel.y -= vt * 0.05 * tangent.y;
+        scoreCb && scoreCb(this.score);
+        return true;
+      }
+      return false;
+    }
+    draw(ctx){
+      ctx.strokeStyle = this.color;
+      ctx.lineWidth = this.width;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(this.a.x, this.a.y);
+      ctx.lineTo(this.b.x, this.b.y);
+      ctx.stroke();
+    }
+  }
+
+  class Bumper {
+    constructor(x, y, r=22, strength=800){
+      this.pos = new Vec2(x, y);
+      this.r = r;
+      this.strength = strength; // 반발 가중치
+      this.color = '#7cf6ff';
+      this.glow = 0; // 0..1
+    }
+    collideBall(ball, scoreCb){
+      const d = Vec2.sub(ball.pos, this.pos);
+      const dist = d.len();
+      const minDist = this.r + ball.r;
+      if (dist < minDist){
+        const n = dist>0 ? d.scale(1/dist) : new Vec2(0,-1);
+        const overlap = minDist - dist;
+        // 위치 보정
+        ball.pos.x += n.x * (overlap + 0.5);
+        ball.pos.y += n.y * (overlap + 0.5);
+        // 강한 반발
+        const kick = this.strength;
+        ball.vel.x += n.x * kick;
+        ball.vel.y += n.y * kick;
+        this.glow = 1;
+        scoreCb && scoreCb(100 + Math.min(400, ball.combo*5));
+        ball.combo++;
+        return true;
+      }
+      return false;
+    }
+    update(dt){
+      this.glow = Math.max(0, this.glow - dt*2.5);
+    }
+    draw(ctx){
+      const g = ctx.createRadialGradient(this.pos.x, this.pos.y, 6, this.pos.x, this.pos.y, this.r+10);
+      g.addColorStop(0, 'rgba(124,246,255,'+(0.6+0.4*this.glow)+')');
+      g.addColorStop(1, 'rgba(124,246,255,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(this.pos.x, this.pos.y, this.r+10, 0, Math.PI*2);
+      ctx.fill();
+
+      ctx.fillStyle = '#0e152b';
+      ctx.beginPath();
+      ctx.arc(this.pos.x, this.pos.y, this.r, 0, Math.PI*2);
+      ctx.fill();
+
+      ctx.strokeStyle = 'rgba(255,255,255,'+(0.35+0.5*this.glow)+')';
+      ctx.lineWidth = 4;
+      ctx.stroke();
+    }
+  }
+
+  class Flipper {
+    constructor(pivotX, pivotY, length, side='left'){
+      this.pivot = new Vec2(pivotX, pivotY);
+      this.length = length;
+      this.side = side; // 'left' or 'right'
+      // 각도 범위
+      const base = side==='left' ? -20 * Math.PI/180 : 200 * Math.PI/180; // 내림 위치
+      const up = side==='left' ? 35 * Math.PI/180 : 145 * Math.PI/180;   // 올림 위치
+      this.minA = Math.min(base, up);
+      this.maxA = Math.max(base, up);
+      this.angle = base;
+      this.target = base;
+      this.angVel = 0; // 회전 속도
+      this.motorSpeed = 16; // 가속 상수
+      this.damp = 12; // 감쇠
+      this.thickness = 16;
+      this.lastHitTime = 0;
+    }
+    tip(){
+      return new Vec2(
+        this.pivot.x + Math.cos(this.angle) * this.length,
+        this.pivot.y + Math.sin(this.angle) * this.length
+      );
+    }
+    setPressed(pressed){
+      this.target = pressed ? (this.side==='left'? this.maxA : this.minA) : (this.side==='left'? this.minA : this.maxA);
+    }
+    update(dt){
+      // 간단한 1차 시스템으로 타겟 각도 추종
+      const err = this.target - this.angle;
+      this.angVel += this.motorSpeed * err * dt;
+      this.angVel *= Math.exp(-this.damp*dt);
+      this.angle += this.angVel * dt;
+      // 범위 클램프
+      if (this.side==='left'){
+        this.angle = Math.max(this.minA, Math.min(this.maxA, this.angle));
+      } else {
+        this.angle = Math.min(this.maxA, Math.max(this.minA, this.angle));
+      }
+    }
+    collideBall(ball, scoreCb){
+      // 플리퍼를 선분 두께 캡슐로 모델링
+      const a = this.pivot;
+      const b = this.tip();
+      const seg = new Segment(a.x, a.y, b.x, b.y, { width: this.thickness, restitution: 0.9, score: 10 });
+      // 두께 반영 위해 공 반지름을 살짝 키워서 충돌 판정
+      const savedR = ball.r;
+      ball.r = savedR + this.thickness*0.5;
+      const hit = seg.collideBall(ball, scoreCb);
+      ball.r = savedR;
+      if (hit){
+        // 회전 운동량을 공에 전달
+        const t = Vec2.sub(b, a); t.norm();
+        const tangent = new Vec2(-t.y, t.x);
+        const impulse = this.angVel * 280; // 튕김 정도
+        ball.vel.x += tangent.x * impulse;
+        ball.vel.y += tangent.y * impulse;
+        this.lastHitTime = performance.now();
+      }
+      return hit;
+    }
+    draw(ctx){
+      // 본체
+      const tip = this.tip();
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = '#ffd18f';
+      ctx.lineWidth = this.thickness;
+      ctx.beginPath();
+      ctx.moveTo(this.pivot.x, this.pivot.y);
+      ctx.lineTo(tip.x, tip.y);
+      ctx.stroke();
+      // 힌지
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(this.pivot.x, this.pivot.y, this.thickness*0.55, 0, Math.PI*2);
+      ctx.fill();
+    }
+  }
+
+  class Launcher {
+    // 우측 플런저 레인
+    constructor(x, y, w, h){
+      this.x = x; this.y = y; this.w = w; this.h = h;
+      this.power = 0; // 0..1
+      this.charging = false;
+      this.maxSpeed = -1700; // 위로 발사 속도
+    }
+    contains(px, py){ return px>=this.x && px<=this.x+this.w && py>=this.y && py<=this.y+this.h; }
+    startCharge(){ this.charging = true; }
+    endCharge(){ this.charging = false; const p = this.power; this.power = 0; return p; }
+    update(dt){ if (this.charging){ this.power = Math.min(1, this.power + dt*0.8); } else { this.power = Math.max(0, this.power - dt*1.5); } }
+    draw(ctx){
+      // 레일 배경
+      ctx.fillStyle = 'rgba(255,255,255,0.06)';
+      ctx.fillRect(this.x, this.y, this.w, this.h);
+      ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(this.x+2, this.y+2, this.w-4, this.h-4);
+      // 파워 게이지
+      const pad = 6;
+      const gh = (this.h - pad*2) * this.power;
+      ctx.fillStyle = '#9cffa5';
+      ctx.fillRect(this.x+pad, this.y+this.h-pad-gh, this.w- pad*2, gh);
+    }
+  }
+
+  // ============================
+  // 게임 월드 세팅
+  // ============================
+  const state = {
+    score: 0,
+    lives: 3,
+    running: true,
+    phase: 'ready', // ready, playing, lost, over
+  };
+
+  let ball, leftFlip, rightFlip, segments = [], bumpers = [], launcher;
+
+  function addScore(s){
+    state.score += s;
+    hudScore.textContent = state.score;
+  }
+
+  function setPhase(p){
+    state.phase = p;
+    hudState.textContent = p;
+  }
+
+  function resetGame(){
+    state.score = 0; state.lives = 3; state.running = true; setPhase('ready');
+    hudLives.textContent = state.lives;
+    buildWorld();
+    spawnBallInLauncher();
+  }
+
+  function buildWorld(){
+    segments = []; bumpers = [];
+    // 외벽 - 아래 중앙은 개방 (드레인)
+    const pad = 18;
+    const gap = 160; // 플리퍼 사이 구멍
+    // 좌측 벽
+    segments.push(new Segment(pad, pad, pad, BASE_H-120, {width: 10}));
+    // 우측 벽과 플런저 분리벽
+    const laneW = 64;
+    segments.push(new Segment(BASE_W - laneW - pad, pad, BASE_W - laneW - pad, BASE_H-120, {width: 10}));
+    segments.push(new Segment(BASE_W - pad, pad, BASE_W - pad, BASE_H-120, {width: 10}));
+    // 상단 가로벽
+    segments.push(new Segment(pad, pad, BASE_W - pad, pad, {width: 10}));
+
+    // 하부 기울어진 레일 - 공을 플리퍼 쪽으로 유도
+    segments.push(new Segment(pad, BASE_H-180, BASE_W*0.35, BASE_H-120, {width: 10}));
+    segments.push(new Segment(BASE_W - laneW - pad, BASE_H-180, BASE_W*0.65, BASE_H-120, {width: 10}));
+
+    // 플리퍼 근처 가이드
+    segments.push(new Segment(BASE_W*0.35, BASE_H-120, BASE_W*0.5 - gap*0.5, BASE_H-40, {width: 10}));
+    segments.push(new Segment(BASE_W*0.65, BASE_H-120, BASE_W*0.5 + gap*0.5, BASE_H-40, {width: 10}));
+
+    // 범퍼 세트
+    const by = pad + 120;
+    bumpers.push(new Bumper(BASE_W*0.35, by+40, 26, 960));
+    bumpers.push(new Bumper(BASE_W*0.5,  by,    26, 960));
+    bumpers.push(new Bumper(BASE_W*0.65, by+40, 26, 960));
+
+    // 꾸밈 선 - 점수는 낮게
+    segments.push(new Segment(BASE_W*0.2, by+140, BASE_W*0.8, by+140, {width: 4, color: 'rgba(255,255,255,0.15)', score: 0}));
+
+    // 플리퍼
+    leftFlip  = new Flipper(BASE_W*0.5 - gap*0.5 - 30, BASE_H-40, 110, 'left');
+    rightFlip = new Flipper(BASE_W*0.5 + gap*0.5 + 30, BASE_H-40, 110, 'right');
+
+    // 발사 레인
+    launcher = new Launcher(BASE_W - laneW - pad + 8, pad+8, laneW-16, BASE_H-140);
+  }
+
+  function spawnBallInLauncher(){
+    ball = new Ball(launcher.x + launcher.w*0.5, BASE_H-160);
+    ball.vel.set = undefined; // just in case
+    ball.vel.x = 0; ball.vel.y = 0;
+    ball.combo = 0;
+    setPhase('ready');
+    msg.textContent = '스페이스로 발사. ← → 로 플리퍼.';
+  }
+
+  // ============================
+  // 입력
+  // ============================
+  const keys = { left:false, right:false, space:false };
+  window.addEventListener('keydown', (e)=>{
+    if (e.repeat) return;
+    if (e.code==='ArrowLeft') { keys.left = true; leftFlip.setPressed(true); }
+    if (e.code==='ArrowRight'){ keys.right = true; rightFlip.setPressed(true); }
+    if (e.code==='Space'){ keys.space = true; if (state.phase!=='playing'){ launcher.startCharge(); } }
+    if (e.code==='KeyP'){ togglePause(); }
+    if (e.code==='KeyR'){ resetGame(); }
+  });
+  window.addEventListener('keyup', (e)=>{
+    if (e.code==='ArrowLeft') { keys.left = false; leftFlip.setPressed(false); }
+    if (e.code==='ArrowRight'){ keys.right = false; rightFlip.setPressed(false); }
+    if (e.code==='Space'){
+      if (state.phase!=='playing'){
+        const p = launcher.endCharge();
+        if (ballInLauncher())
+          launchBall(p);
+      }
+      keys.space = false;
+    }
+  });
+
+  // 터치 - 좌우 영역 터치로 플리퍼, 아래에서 위로 스와이프하면 발사
+  let touchLeft=false, touchRight=false; let swipeStart=null;
+  canvas.addEventListener('pointerdown', (e)=>{
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / viewScale;
+    const y = (e.clientY - rect.top)  / viewScale;
+    swipeStart = {x, y, t: performance.now()};
+    if (x < BASE_W*0.5) { touchLeft = true; leftFlip.setPressed(true); }
+    else { touchRight = true; rightFlip.setPressed(true); }
+    if (state.phase!=='playing' && launcher.contains(x,y)) { launcher.startCharge(); }
+  });
+  window.addEventListener('pointerup', ()=>{
+    if (touchLeft) { touchLeft=false; leftFlip.setPressed(false); }
+    if (touchRight){ touchRight=false; rightFlip.setPressed(false); }
+    if (state.phase!=='playing' && swipeStart){
+      const rect = canvas.getBoundingClientRect();
+      // 마지막 포인터 위치를 가져오기는 어렵지만 간단히 스와이프 시간으로 추정
+      const dt = Math.max(1, performance.now() - swipeStart.t);
+      if (dt < 500){
+        const p = Math.min(1, 500/dt); // 빠르면 강함
+        launcher.power = p;
+        const fired = launcher.endCharge();
+        if (ballInLauncher()) launchBall(fired);
+      } else {
+        launcher.endCharge();
+      }
+    }
+    swipeStart = null;
+  });
+
+  btnPause.addEventListener('click', togglePause);
+  btnReset.addEventListener('click', resetGame);
+
+  function togglePause(){
+    state.running = !state.running;
+    btnPause.textContent = state.running ? '⏸' : '▶';
+    msg.textContent = state.running ? '진행 중' : '일시정지';
+  }
+
+  function ballInLauncher(){
+    return launcher.contains(ball.pos.x, ball.pos.y);
+  }
+  function launchBall(power){
+    // 파워에 비례해 위로 속도 적용
+    ball.vel.y = launcher.maxSpeed * (0.25 + 0.75*power);
+    ball.vel.x = -60 * (0.25 + 0.75*power); // 약간 왼쪽으로
+    setPhase('playing');
+    msg.textContent = '플리퍼로 공을 살려보세요';
+  }
+
+  // ============================
+  // 메인 루프
+  // ============================
+  let last = performance.now();
+  let acc = 0; // 고정 타임스텝 누적
+  const DT = 1/120; // 물리 업데이트 간격
+
+  function step(){
+    const now = performance.now();
+    let dt = (now - last) / 1000;
+    last = now;
+    dt = Math.min(dt, 0.05);
+
+    if (state.running){
+      acc += dt;
+      while (acc >= DT){
+        update(DT);
+        acc -= DT;
+      }
+      draw();
+    }
+
+    requestAnimationFrame(step);
+  }
+
+  function update(dt){
+    launcher.update(dt);
+    powerBadge.textContent = 'Power: ' + Math.round(launcher.power*100) + '%';
+
+    leftFlip.update(dt);
+    rightFlip.update(dt);
+
+    // 공 이동
+    ball.integrate(dt);
+
+    // 벽 충돌
+    for (const s of segments){ s.collideBall(ball, (sc)=>{ addScore(sc); ball.combo = Math.max(0, ball.combo-1); }); }
+
+    // 범퍼
+    for (const b of bumpers){
+      b.update(dt);
+      b.collideBall(ball, (sc)=>{ addScore(sc); });
+    }
+
+    // 플리퍼 충돌을 마지막에
+    leftFlip.collideBall(ball, (sc)=>addScore(sc));
+    rightFlip.collideBall(ball, (sc)=>addScore(sc));
+
+    // 바닥 드레인 판정
+    if (ball.pos.y - ball.r > BASE_H){
+      loseLife();
+    }
+
+    // 발사 레인 하단 바닥 추가 안전
+    if (ballInLauncher()){
+      // 레인 바닥에서 멈춤 방지
+      if (ball.vel.len() < 5){ ball.vel.y = -30; }
+    }
+
+    // 화면 밖 좌우 방지
+    if (ball.pos.x - ball.r < 0){ ball.pos.x = ball.r; ball.vel.x = Math.abs(ball.vel.x)*0.7; }
+    if (ball.pos.x + ball.r > BASE_W){ ball.pos.x = BASE_W - ball.r; ball.vel.x = -Math.abs(ball.vel.x)*0.7; }
+    // 상단 방지
+    if (ball.pos.y - ball.r < 0){ ball.pos.y = ball.r; ball.vel.y = Math.abs(ball.vel.y); }
+  }
+
+  function loseLife(){
+    if (state.phase === 'lost' || state.phase === 'over') return;
+    state.lives--;
+    hudLives.textContent = state.lives;
+    setPhase('lost');
+    msg.textContent = state.lives>0 ? '공을 잃었습니다. 스페이스로 다시 발사' : '게임 오버. R로 재시작';
+    if (state.lives <= 0){ setPhase('over'); return; }
+    // 새 공 준비
+    spawnBallInLauncher();
+  }
+
+  function draw(){
+    ctx.clearRect(0, 0, BASE_W, BASE_H);
+
+    // 배경 그라디언트
+    const bg = ctx.createLinearGradient(0, 0, 0, BASE_H);
+    bg.addColorStop(0, 'rgba(124,246,255,0.08)');
+    bg.addColorStop(1, 'rgba(255,156,243,0.08)');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, BASE_W, BASE_H);
+
+    // 보드 안쪽 테두리
+    ctx.strokeStyle = 'rgba(255,255,255,0.14)';
+    ctx.lineWidth = 12;
+    ctx.strokeRect(6, 6, BASE_W-12, BASE_H-12);
+
+    // 발사 레인
+    launcher.draw(ctx);
+
+    // 범퍼
+    for (const b of bumpers){ b.draw(ctx); }
+
+    // 가드와 레일
+    for (const s of segments){ s.draw(ctx); }
+
+    // 플리퍼
+    leftFlip.draw(ctx);
+    rightFlip.draw(ctx);
+
+    // 공
+    ball.draw(ctx);
+
+    // 상태 텍스트
+    if (state.phase !== 'playing'){
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      ctx.font = '700 18px ui-sans-serif, system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText(msg.textContent, BASE_W*0.5, BASE_H*0.5);
+    }
+  }
+
+  // 초기화
+  buildWorld();
+  resizeCanvas();
+  resetGame();
+  requestAnimationFrame(step);
+
+  </script>
 </body>
 </html>
